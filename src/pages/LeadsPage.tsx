@@ -26,6 +26,7 @@ import {
   Send, Calendar, Eye, ChevronRight, BarChart3, ArrowRightLeft, Star,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { KanbanBoard } from "@/components/KanbanBoard";
 
 const STATUSES: LeadStatus[] = ["New", "Contact Attempted", "Connected", "Interested", "Application Submitted", "Interview Scheduled", "Interview Completed", "Counseling", "Qualified", "Admission", "Lost"];
 const LOST_REASONS: LostReason[] = ["Too Expensive", "Not Interested", "Joined Competitor", "No Response", "Wrong Number"];
@@ -582,61 +583,7 @@ function LeadCreateForm({ onSave }: { onSave: (lead: Lead) => void }) {
   );
 }
 
-// ─── Pipeline Board ───
-function PipelineBoard({ leads, onSelect }: { leads: Lead[]; onSelect: (l: Lead) => void }) {
-  const stages: { status: LeadStatus; color: string }[] = [
-    { status: "New", color: "border-info" },
-    { status: "Contact Attempted", color: "border-muted-foreground" },
-    { status: "Connected", color: "border-primary" },
-    { status: "Interested", color: "border-warning" },
-    { status: "Application Submitted", color: "border-primary" },
-    { status: "Interview Scheduled", color: "border-primary" },
-    { status: "Interview Completed", color: "border-primary" },
-    { status: "Counseling", color: "border-primary" },
-    { status: "Qualified", color: "border-success" },
-    { status: "Admission", color: "border-success" },
-    { status: "Lost", color: "border-muted-foreground" },
-  ];
-
-  return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
-      {stages.map(({ status, color }) => {
-        const stageLeads = leads.filter((l) => l.status === status)
-          .sort((a, b) => (b.priorityScore ?? 0) - (a.priorityScore ?? 0));
-        return (
-          <div key={status} className={`min-w-[200px] flex-shrink-0 rounded-xl bg-card shadow-card border-t-4 ${color}`}>
-            <div className="p-3 border-b flex items-center justify-between">
-              <span className="text-xs font-semibold text-card-foreground">{status}</span>
-              <span className="text-[10px] font-bold bg-muted rounded-full px-2 py-0.5 text-muted-foreground">{stageLeads.length}</span>
-            </div>
-            <div className="p-2 space-y-2 max-h-[400px] overflow-y-auto">
-              {stageLeads.map((lead) => (
-                <div
-                  key={lead.id}
-                  className="rounded-lg border border-border p-2.5 cursor-pointer hover:shadow-card-hover transition-shadow"
-                  onClick={() => onSelect(lead)}
-                >
-                  <p className="text-sm font-medium text-card-foreground truncate">{lead.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{lead.interestedCourse}</p>
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
-                    <TempBadge temp={lead.temperature} />
-                    <PriorityBadge cat={lead.priorityCategory} />
-                  </div>
-                  {lead.leadScore > 0 && (
-                    <div className="mt-1.5 h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${lead.leadScore}%` }} />
-                    </div>
-                  )}
-                </div>
-              ))}
-              {stageLeads.length === 0 && <p className="text-[10px] text-muted-foreground text-center py-4">No leads</p>}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// PipelineBoard replaced by KanbanBoard component
 
 // ─── Main Page ───
 export default function LeadsPage() {
@@ -693,6 +640,24 @@ export default function LeadsPage() {
     setLeads(all);
     store.saveLeads(all);
     setSelectedLead(updated);
+  };
+
+  const handleKanbanStatusChange = (leadId: string, newStatus: LeadStatus) => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+    const activity = {
+      id: `act${Date.now()}`, leadId, type: `Status → ${newStatus}`,
+      description: `Moved to ${newStatus} via pipeline board`,
+      timestamp: new Date().toISOString(),
+    };
+    const updated: Lead = {
+      ...lead, status: newStatus,
+      activities: [...(lead.activities || []), activity],
+    };
+    const all = leads.map((l) => l.id === leadId ? updated : l);
+    setLeads(all);
+    store.saveLeads(all);
+    toast.success(`${lead.name} moved to ${newStatus}`);
   };
 
   return (
@@ -780,7 +745,7 @@ export default function LeadsPage() {
 
       {/* ─── PIPELINE VIEW ─── */}
       {view === "pipeline" && (
-        <PipelineBoard leads={leads} onSelect={setSelectedLead} />
+        <KanbanBoard leads={leads} onLeadSelect={setSelectedLead} onLeadStatusChange={handleKanbanStatusChange} />
       )}
 
       {/* ─── TABLE VIEW ─── */}

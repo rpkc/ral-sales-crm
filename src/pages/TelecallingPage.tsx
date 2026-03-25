@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from "react";
 import { store } from "@/lib/mock-data";
-import { CallLog, CallOutcome, Lead, Admission, NotInterestedReason, FollowUpType, ConversationInsight } from "@/lib/types";
+import { CallLog, CallOutcome, Lead, LeadStatus, Admission, NotInterestedReason, FollowUpType, ConversationInsight } from "@/lib/types";
 import {
   MASTER_CALL_OUTCOMES, MASTER_OBJECTIONS, MASTER_FOLLOWUP_TYPES,
   MASTER_CAREER_GOALS, MASTER_LEAD_MOTIVATIONS, MASTER_COURSE_NAMES,
 } from "@/lib/master-schema";
 import { Button } from "@/components/ui/button";
+import { KanbanBoard } from "@/components/KanbanBoard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -423,8 +424,9 @@ export default function TelecallingPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted">
+         <TabsList className="bg-muted">
           <TabsTrigger value="queue">Smart Queue</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -1017,6 +1019,25 @@ export default function TelecallingPage() {
               })}
             </div>
           </div>
+        </TabsContent>
+
+        {/* ═══════ TAB: PIPELINE KANBAN ═══════ */}
+        <TabsContent value="pipeline" className="mt-4">
+          <KanbanBoard
+            leads={activeAssigned}
+            onLeadSelect={setSelectedLead}
+            onLeadStatusChange={(leadId: string, newStatus: LeadStatus) => {
+              const lead = leads.find((l) => l.id === leadId);
+              if (!lead) return;
+              const updated = { ...lead, status: newStatus, activities: [...(lead.activities || []), {
+                id: `act${Date.now()}`, leadId, type: `Status → ${newStatus}`,
+                description: `Moved to ${newStatus} via telecaller pipeline`, timestamp: new Date().toISOString(),
+              }] };
+              const all = leads.map((l) => l.id === leadId ? updated : l);
+              store.saveLeads(all);
+              window.location.reload();
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
