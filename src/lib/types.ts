@@ -172,7 +172,19 @@ export interface Lead {
   priorityCategory?: "High Priority" | "Medium Priority" | "Low Priority";
 }
 
-export type CallOutcome = "Connected" | "Not answered" | "Interested" | "Not interested" | "Call later";
+export type CallOutcome = "Connected" | "Not answered" | "Interested" | "Not interested" | "Call later" | "Wrong Number";
+export type NotInterestedReason = "Too Expensive" | "Course Not Relevant" | "Joined Competitor" | "No Time";
+export type FollowUpType = "Call" | "WhatsApp" | "Email" | "Counseling Meeting";
+
+export interface ConversationInsight {
+  careerGoal?: string;
+  budgetRange?: string;
+  preferredLearningMode?: string;
+  decisionMaker?: string;
+  placementExpectation?: string;
+  biggestConcern?: string;
+  preferredStartDate?: string;
+}
 
 export interface CallLog {
   id: string;
@@ -181,6 +193,12 @@ export interface CallLog {
   outcome: CallOutcome;
   notes: string;
   nextFollowUp: string;
+  nextFollowUpTime?: string;
+  followUpType?: FollowUpType;
+  notInterestedReason?: NotInterestedReason;
+  conversationInsight?: ConversationInsight;
+  callbackDate?: string;
+  callbackTime?: string;
   createdAt: string;
 }
 
