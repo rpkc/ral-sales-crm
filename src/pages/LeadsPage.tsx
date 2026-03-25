@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import {
   Plus, Search, Users, UserCheck, TrendingUp, Phone, MessageCircle,
   Mail, Clock, AlertCircle, CheckCircle2, ArrowRight, Flame, Thermometer,
-  Send, Calendar, Eye, ChevronRight, BarChart3, ArrowRightLeft, Star,
+  Send, Calendar, Eye, ChevronRight, BarChart3, ArrowRightLeft, Star, Save,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { KanbanBoard } from "@/components/KanbanBoard";
