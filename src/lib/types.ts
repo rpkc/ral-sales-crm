@@ -14,6 +14,39 @@ export type AudienceType = "Cold" | "Retargeting" | "Lookalike" | "Custom Audien
 export type RetargetingSource = "Website Visitors" | "Video Views" | "Lead Form";
 export type AdType = "Image" | "Video" | "Carousel" | "Reel";
 export type LeadQuality = "Hot" | "Warm" | "Cold";
+export type LeadTemperature = "Hot" | "Warm" | "Cold" | "Dormant";
+export type LeadIntentCategory = "High Intent" | "Medium Intent" | "Low Intent";
+export type DecisionMaker = "Self" | "Parent" | "Joint";
+export type FeePayer = "Self" | "Parent" | "Sponsor";
+export type CommunicationChannel = "Phone Call" | "WhatsApp" | "Email" | "SMS" | "Instagram DM" | "Website Chat";
+export type LostReason = "Too Expensive" | "Not Interested" | "Joined Competitor" | "No Response" | "Wrong Number";
+export type TransferReason = "Language mismatch" | "Course specialization" | "Counselor unavailable";
+
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: string;
+  description: string;
+  channel?: CommunicationChannel;
+  userId?: string;
+  timestamp: string;
+}
+
+export interface LeadTransfer {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  reason: TransferReason;
+  timestamp: string;
+}
+
+export interface QualificationChecklist {
+  budgetConfirmed: boolean;
+  courseInterestConfirmed: boolean;
+  locationPreference: boolean;
+  startTimeline: boolean;
+  placementExpectation: boolean;
+}
 
 export interface AdCreative {
   id: string;
@@ -102,6 +135,41 @@ export interface Lead {
   budgetRange: string;
   urgencyLevel: string;
   otherInstitutes: string;
+  // Enrichment (Section 1)
+  currentEducation?: string;
+  graduationYear?: string;
+  currentOccupation?: string;
+  collegeInstitution?: string;
+  feePayer?: FeePayer;
+  decisionMaker?: DecisionMaker;
+  // Intent (Section 2)
+  intentScore?: number;
+  intentCategory?: LeadIntentCategory;
+  lastInteractionType?: string;
+  lastInteractionDate?: string;
+  // Temperature (Section 6)
+  temperature?: LeadTemperature;
+  // Ownership (Section 5)
+  assignedCounselor?: string;
+  leadOwner?: string;
+  transferHistory?: LeadTransfer[];
+  // Timeline (Section 3)
+  activities?: LeadActivity[];
+  // Qualification (Section 9)
+  qualification?: QualificationChecklist;
+  qualificationScore?: number;
+  // Course Recommendation (Section 10)
+  recommendedCourse?: string;
+  alternateCourse?: string;
+  recommendationReason?: string;
+  // Lost (Section 13)
+  lostReason?: LostReason;
+  // SLA (Section 7)
+  firstCallTime?: string;
+  firstResponseTime?: string;
+  // Priority (Section 14)
+  priorityScore?: number;
+  priorityCategory?: "High Priority" | "Medium Priority" | "Low Priority";
 }
 
 export type CallOutcome = "Connected" | "Not answered" | "Interested" | "Not interested" | "Call later";
