@@ -113,13 +113,17 @@ function TelecallerDashboard() {
 function CounselorDashboard() {
   const leads = store.getLeads();
   const admissions = store.getAdmissions();
-  const followUps = store.getFollowUps();
   const today = new Date().toISOString().split("T")[0];
 
-  const counselingLeads = leads.filter((l) => l.status === "Counseling" || l.status === "Qualified");
+  const pendingCounseling = leads.filter((l) => l.status === "Counseling");
   const hotLeads = leads.filter((l) => l.intentCategory === "High Intent" && l.qualification?.budgetConfirmed && l.status !== "Admission" && l.status !== "Lost");
   const admissionsToday = admissions.filter((a) => a.admissionDate === today);
-  const pendingCounseling = leads.filter((l) => l.status === "Counseling");
+  const scholarshipReqs = leads.filter((l) => l.scholarshipApplied && l.status !== "Admission" && l.status !== "Lost");
+  const emiLeads = leads.filter((l) => l.emiSelected && l.status !== "Admission" && l.status !== "Lost");
+  const highTicket = leads.filter((l) => {
+    const course = store.getCourses().find((c) => c.name === l.interestedCourse);
+    return course && course.fee >= 160000 && l.status !== "Admission" && l.status !== "Lost";
+  });
 
   return (
     <div className="space-y-6">
@@ -127,27 +131,30 @@ function CounselorDashboard() {
         <h1 className="text-2xl font-bold text-foreground">Counselor Dashboard</h1>
         <p className="text-sm text-muted-foreground">Convert qualified leads into admissions</p>
       </div>
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Pending Counseling" value={pendingCounseling.length} icon={<Users className="h-5 w-5" />} />
-        <StatCard title="Counseling Completed" value={leads.filter((l) => l.activities?.some((a) => a.type === "Counseling Done")).length} icon={<Target className="h-5 w-5" />} />
-        <StatCard title="Hot Leads" value={hotLeads.length} icon={<Star className="h-5 w-5" />} />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Admission Discussions" value={pendingCounseling.length} icon={<Users className="h-5 w-5" />} />
+        <StatCard title="Scholarship Requests" value={scholarshipReqs.length} icon={<DollarSign className="h-5 w-5" />} />
+        <StatCard title="EMI Discussions" value={emiLeads.length} icon={<Clock className="h-5 w-5" />} />
+        <StatCard title="High Ticket Leads" value={highTicket.length} icon={<Star className="h-5 w-5" />} />
+      </div>
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
+        <StatCard title="Hot Leads" value={hotLeads.length} icon={<Zap className="h-5 w-5" />} />
         <StatCard title="Admissions Today" value={admissionsToday.length} icon={<GraduationCap className="h-5 w-5" />} />
+        <StatCard title="Total Admissions" value={admissions.length} icon={<Target className="h-5 w-5" />} />
       </div>
 
-      {/* Hot leads panel */}
       <div className="rounded-xl bg-card p-5 shadow-card">
         <h3 className="mb-3 text-sm font-semibold text-card-foreground flex items-center gap-2"><Star className="h-4 w-4 text-warning" /> Hot Leads — Ready for Conversion</h3>
-        <p className="mb-3 text-xs text-muted-foreground">Leads with high intent, confirmed budget, and completed counseling</p>
         {hotLeads.length === 0 ? <p className="text-sm text-muted-foreground">No hot leads at the moment</p> : (
           <div className="space-y-2">
             {hotLeads.map((l) => (
               <div key={l.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium text-card-foreground">{l.name}</p>
-                  <p className="text-xs text-muted-foreground">{l.interestedCourse} · Budget: {l.budgetRange || "—"}</p>
+                  <p className="text-xs text-muted-foreground">{l.interestedCourse} · Budget: {l.budgetRange || "—"} {l.scholarshipApplied ? `· Scholarship: ${l.scholarshipPercentage || 0}%` : ""}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-[10px]">Intent: {l.intentScore || 0}</Badge>
+                  {l.admissionProbability && <Badge variant="outline" className={`text-[10px] ${l.admissionProbability === "High" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>{l.admissionProbability}</Badge>}
                   <StatusBadge status={l.status} />
                 </div>
               </div>
@@ -156,7 +163,6 @@ function CounselorDashboard() {
         )}
       </div>
 
-      {/* Recent admissions */}
       <div className="rounded-xl bg-card p-5 shadow-card">
         <h3 className="mb-3 text-sm font-semibold text-card-foreground">Recent Admissions</h3>
         {admissions.length === 0 ? <p className="text-sm text-muted-foreground">No admissions yet</p> : (
@@ -165,7 +171,7 @@ function CounselorDashboard() {
               <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium text-card-foreground">{a.studentName}</p>
-                  <p className="text-xs text-muted-foreground">{a.courseSelected} · {a.batch}</p>
+                  <p className="text-xs text-muted-foreground">{a.courseSelected} · ₹{(a.totalFee || 0).toLocaleString()} {a.scholarshipApplied ? `· ${a.scholarshipPercentage}% scholarship` : ""}</p>
                 </div>
                 <Badge variant="outline" className="text-[10px]">{a.admissionDate}</Badge>
               </div>
@@ -174,6 +180,8 @@ function CounselorDashboard() {
         )}
       </div>
     </div>
+  );
+}
   );
 }
 
