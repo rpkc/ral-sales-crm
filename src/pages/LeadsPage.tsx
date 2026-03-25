@@ -383,11 +383,13 @@ function LeadDetailPanel({
   );
 }
 
-// ─── Lead Creation Form ───
-function LeadCreateForm({ onSave }: { onSave: (lead: Lead) => void }) {
+// ─── Lead Creation Form (with role-based behavior) ───
+function LeadCreateForm({ onSave, onCancel, userRole }: { onSave: (lead: Lead) => void; onCancel?: () => void; userRole?: string }) {
   const users = store.getUsers();
   const telecallers = users.filter((u) => u.role === "telecaller");
   const campaigns = store.getCampaigns();
+
+  const isMarketing = userRole === "marketing_manager";
 
   const [form, setForm] = useState({
     name: "", phone: "", email: "", source: "", campaignId: "", interestedCourse: "", assignedTelecallerId: "",
@@ -395,42 +397,58 @@ function LeadCreateForm({ onSave }: { onSave: (lead: Lead) => void }) {
     feePayer: "" as FeePayer | "", decisionMaker: "" as DecisionMaker | "", budgetRange: "",
     highestQualification: "", currentStatus: "" as CurrentStatus | "", careerGoal: "" as CareerGoal | "",
     leadMotivation: "" as LeadMotivation | "", preferredStartTime: "" as PreferredStartTime | "",
-    expectedSalary: "", jobLocationPreference: "",
+    expectedSalary: "", jobLocationPreference: "", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDirty, setIsDirty] = useState(false);
 
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Name is required.";
-    if (!form.phone.trim()) e.phone = "Phone number is required.";
+    if (!form.phone.trim()) e.phone = "Please enter the lead's phone number.";
     else if (!/^\d{10}$/.test(form.phone.trim())) e.phone = "Please enter a valid 10-digit phone number.";
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = "Please enter a valid email address.";
-    if (!form.interestedCourse) e.interestedCourse = "Please select a course of interest.";
+    if (!form.source) e.source = "Please select a lead source.";
+    if (!isMarketing && !form.interestedCourse) e.interestedCourse = "Please select a course of interest.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: string) => { setForm((p) => ({ ...p, [k]: v })); setIsDirty(true); };
 
-  const handleSubmit = () => {
-    if (!validate()) return;
-
+  const buildLead = (): Lead => {
     // Duplicate detection
     const existing = store.getLeads();
     const dup = existing.find((l) => l.phone === form.phone || (form.email && l.email === form.email));
     if (dup) {
       toast.error(`Possible duplicate lead detected: ${dup.name} (${dup.phone})`);
-      return;
+      throw new Error("duplicate");
     }
 
-    const newLead: Lead = {
-      id: `l${Date.now()}`, name: form.name, phone: form.phone, email: form.email,
+    // Round-robin if no telecaller selected
+    let assignedTc = form.assignedTelecallerId;
+    if (!assignedTc && telecallers.length > 0) {
+      const counts = new Map<string, number>();
+      telecallers.forEach((tc) => counts.set(tc.id, 0));
+      existing.forEach((l) => {
+        if (l.assignedTelecallerId && counts.has(l.assignedTelecallerId))
+          counts.set(l.assignedTelecallerId, (counts.get(l.assignedTelecallerId) || 0) + 1);
+      });
+      let minId = telecallers[0].id, minCount = Infinity;
+      counts.forEach((c, id) => { if (c < minCount) { minCount = c; minId = id; } });
+      assignedTc = minId;
+    }
+
+    const assignedName = users.find((u) => u.id === assignedTc)?.name || "";
+    const leadId = `l${Date.now()}`;
+    const now = new Date();
+
+    return {
+      id: leadId, name: form.name, phone: form.phone, email: form.email,
       source: form.source, campaignId: form.campaignId, interestedCourse: form.interestedCourse,
-      assignedTelecallerId: form.assignedTelecallerId, status: "New",
-      createdAt: new Date().toISOString().split("T")[0],
-      adSetName: "", adName: "", landingPageUrl: "",
-      utm: { utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "" },
-      leadScore: 30, leadQuality: "Cold", budgetRange: form.budgetRange, urgencyLevel: "", otherInstitutes: "",
+      assignedTelecallerId: assignedTc, status: "New",
+      createdAt: now.toISOString().split("T")[0],
+      leadScore: 30, leadQuality: "Cold", budgetRange: form.budgetRange, urgencyLevel: "",
       currentEducation: form.currentEducation, graduationYear: form.graduationYear,
       currentOccupation: form.currentOccupation, collegeInstitution: form.collegeInstitution,
       feePayer: form.feePayer as FeePayer || undefined, decisionMaker: form.decisionMaker as DecisionMaker || undefined,
@@ -443,142 +461,193 @@ function LeadCreateForm({ onSave }: { onSave: (lead: Lead) => void }) {
       jobLocationPreference: form.jobLocationPreference || undefined,
       intentScore: 30, intentCategory: "Low Intent", temperature: "Cold",
       priorityScore: 30, priorityCategory: "Low Priority",
-      activities: [{ id: `act${Date.now()}`, leadId: `l${Date.now()}`, type: "Lead Created", description: `New lead: ${form.name}`, timestamp: new Date().toISOString() }],
+      activities: [
+        { id: `act${Date.now()}`, leadId, type: "Lead Created", description: `New lead: ${form.name}`, timestamp: now.toISOString() },
+        ...(assignedTc ? [{ id: `act${Date.now() + 1}`, leadId, type: "Lead Assigned", description: `Assigned to ${assignedName} (auto)`, timestamp: new Date(now.getTime() + 1000).toISOString() }] : []),
+      ],
     };
-    onSave(newLead);
-    toast.success("Lead created successfully.");
+  };
+
+  const handleSaveDraft = () => {
+    if (!form.name.trim() && !form.phone.trim()) {
+      toast.error("Enter at least a name or phone number.");
+      return;
+    }
+    try {
+      const lead = buildLead();
+      onSave(lead);
+      toast.success("Lead saved as draft.");
+    } catch { /* duplicate */ }
+  };
+
+  const handleSubmit = () => {
+    if (!validate()) return;
+    try {
+      const lead = buildLead();
+      onSave(lead);
+      toast.success("Lead successfully created and assigned for telecalling.");
+    } catch { /* duplicate */ }
+  };
+
+  const handleCancel = () => {
+    if (isDirty && !window.confirm("You have unsaved changes. Save before leaving?")) return;
+    onCancel?.();
   };
 
   return (
-    <div className="space-y-3 pt-2 max-h-[75vh] overflow-y-auto pr-1">
-      <div className="grid grid-cols-2 gap-3">
-        <div><Label>Name <span className="text-destructive">*</span></Label><Input value={form.name} onChange={(e) => set("name", e.target.value)} /><FieldError msg={errors.name} /></div>
-        <div><Label>Phone <span className="text-destructive">*</span></Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="10-digit number" /><FieldError msg={errors.phone} /></div>
-      </div>
-      <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /><FieldError msg={errors.email} /></div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Lead Source</Label>
-          <Select value={form.source} onValueChange={(v) => set("source", v)}>
-            <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-            <SelectContent>{MASTER_LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-          </Select>
+    <div className="space-y-3 pt-2">
+      <div className="max-h-[65vh] overflow-y-auto space-y-3 pr-1">
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Name <span className="text-destructive">*</span></Label><Input value={form.name} onChange={(e) => set("name", e.target.value)} /><FieldError msg={errors.name} /></div>
+          <div><Label>Phone <span className="text-destructive">*</span></Label><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="10-digit number" /><FieldError msg={errors.phone} /></div>
+        </div>
+        <div><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /><FieldError msg={errors.email} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Lead Source <span className="text-destructive">*</span></Label>
+            <Select value={form.source} onValueChange={(v) => set("source", v)}>
+              <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
+              <SelectContent>{MASTER_LEAD_SOURCES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            </Select>
+            <FieldError msg={errors.source} />
+          </div>
+          <div>
+            <Label>Campaign</Label>
+            <Select value={form.campaignId} onValueChange={(v) => set("campaignId", v)}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>{campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
         </div>
         <div>
-          <Label>Campaign</Label>
-          <Select value={form.campaignId} onValueChange={(v) => set("campaignId", v)}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>{campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          <Label>Interested Course {!isMarketing && <span className="text-destructive">*</span>}</Label>
+          <Select value={form.interestedCourse} onValueChange={(v) => set("interestedCourse", v)}>
+            <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
+            <SelectContent>{MASTER_COURSE_NAMES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
           </Select>
+          <FieldError msg={errors.interestedCourse} />
+        </div>
+
+        {/* Telecaller assignment — not shown for marketing */}
+        {!isMarketing && (
+          <div>
+            <Label>Assign Telecaller</Label>
+            <Select value={form.assignedTelecallerId} onValueChange={(v) => set("assignedTelecallerId", v)}>
+              <SelectTrigger><SelectValue placeholder="Auto-assign (round-robin)" /></SelectTrigger>
+              <SelectContent>{telecallers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground mt-1">Leave empty for automatic round-robin assignment.</p>
+          </div>
+        )}
+
+        {/* Progressive disclosure — student profile (not for marketing quick form) */}
+        {!isMarketing && form.interestedCourse && (
+          <div className="animate-slide-down space-y-3 rounded-lg border border-border p-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student Profile</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Highest Qualification</Label>
+                <Select value={form.highestQualification} onValueChange={(v) => set("highestQualification", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_QUALIFICATIONS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Current Status</Label>
+                <Select value={form.currentStatus} onValueChange={(v) => set("currentStatus", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_CURRENT_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Career Goal</Label>
+                <Select value={form.careerGoal} onValueChange={(v) => set("careerGoal", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_CAREER_GOALS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Lead Motivation</Label>
+                <Select value={form.leadMotivation} onValueChange={(v) => set("leadMotivation", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_LEAD_MOTIVATIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Current Education</Label><Input value={form.currentEducation} onChange={(e) => set("currentEducation", e.target.value)} placeholder="e.g. B.Com" /></div>
+              <div><Label>Graduation Year</Label><Input value={form.graduationYear} onChange={(e) => set("graduationYear", e.target.value)} placeholder="e.g. 2024" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Current Occupation</Label><Input value={form.currentOccupation} onChange={(e) => set("currentOccupation", e.target.value)} placeholder="e.g. Student" /></div>
+              <div><Label>College / Institution</Label><Input value={form.collegeInstitution} onChange={(e) => set("collegeInstitution", e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Who Pays Fees</Label>
+                <Select value={form.feePayer} onValueChange={(v) => set("feePayer", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{(["Self", "Parent", "Sponsor"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Decision Maker</Label>
+                <Select value={form.decisionMaker} onValueChange={(v) => set("decisionMaker", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{(["Self", "Parent", "Joint"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Preferred Start Time</Label>
+                <Select value={form.preferredStartTime} onValueChange={(v) => set("preferredStartTime", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{(["Immediate", "Within 1 Month", "Within 3 Months", "Not Sure"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div><Label>Budget Range</Label><Input value={form.budgetRange} onChange={(e) => set("budgetRange", e.target.value)} placeholder="e.g. ₹30k-50k" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Expected Salary</Label>
+                <Select value={form.expectedSalary} onValueChange={(v) => set("expectedSalary", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_SALARY_EXPECTATIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Preferred Location</Label>
+                <Select value={form.jobLocationPreference} onValueChange={(v) => set("jobLocationPreference", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{MASTER_LOCATIONS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        <div>
+          <Label>Lead Notes <span className="text-xs text-muted-foreground">(optional)</span></Label>
+          <Input value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Any notes..." />
         </div>
       </div>
-      <div>
-        <Label>Interested Course <span className="text-destructive">*</span></Label>
-        <Select value={form.interestedCourse} onValueChange={(v) => set("interestedCourse", v)}>
-          <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
-          <SelectContent>{MASTER_COURSE_NAMES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-        </Select>
-        <FieldError msg={errors.interestedCourse} />
-      </div>
-      <div>
-        <Label>Assign Telecaller</Label>
-        <Select value={form.assignedTelecallerId} onValueChange={(v) => set("assignedTelecallerId", v)}>
-          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-          <SelectContent>{telecallers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
 
-      {/* Progressive disclosure — student profile */}
-      {form.interestedCourse && (
-        <div className="animate-slide-down space-y-3 rounded-lg border border-border p-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Student Profile</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Highest Qualification</Label>
-              <Select value={form.highestQualification} onValueChange={(v) => set("highestQualification", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_QUALIFICATIONS.map((q) => <SelectItem key={q} value={q}>{q}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Current Status</Label>
-              <Select value={form.currentStatus} onValueChange={(v) => set("currentStatus", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_CURRENT_STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Career Goal</Label>
-              <Select value={form.careerGoal} onValueChange={(v) => set("careerGoal", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_CAREER_GOALS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Lead Motivation</Label>
-              <Select value={form.leadMotivation} onValueChange={(v) => set("leadMotivation", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_LEAD_MOTIVATIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Current Education</Label><Input value={form.currentEducation} onChange={(e) => set("currentEducation", e.target.value)} placeholder="e.g. B.Com" /></div>
-            <div><Label>Graduation Year</Label><Input value={form.graduationYear} onChange={(e) => set("graduationYear", e.target.value)} placeholder="e.g. 2024" /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Current Occupation</Label><Input value={form.currentOccupation} onChange={(e) => set("currentOccupation", e.target.value)} placeholder="e.g. Student" /></div>
-            <div><Label>College / Institution</Label><Input value={form.collegeInstitution} onChange={(e) => set("collegeInstitution", e.target.value)} /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Who Pays Fees</Label>
-              <Select value={form.feePayer} onValueChange={(v) => set("feePayer", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{(["Self", "Parent", "Sponsor"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Decision Maker</Label>
-              <Select value={form.decisionMaker} onValueChange={(v) => set("decisionMaker", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{(["Self", "Parent", "Joint"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-              </Select>
-              <p className="text-[10px] text-muted-foreground mt-1">Understanding the decision maker helps counselors tailor discussions.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Preferred Start Time</Label>
-              <Select value={form.preferredStartTime} onValueChange={(v) => set("preferredStartTime", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{(["Immediate", "Within 1 Month", "Within 3 Months", "Not Sure"] as const).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><Label>Budget Range</Label><Input value={form.budgetRange} onChange={(e) => set("budgetRange", e.target.value)} placeholder="e.g. ₹30k-50k" /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Expected Salary</Label>
-              <Select value={form.expectedSalary} onValueChange={(v) => set("expectedSalary", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_SALARY_EXPECTATIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Preferred Location</Label>
-              <Select value={form.jobLocationPreference} onValueChange={(v) => set("jobLocationPreference", v)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>{MASTER_LOCATIONS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Button onClick={handleSubmit} className="w-full" disabled={!form.name || !form.phone}>Add Lead</Button>
+      {/* Fixed Bottom Buttons */}
+      <div className="flex items-center justify-end gap-2 border-t pt-4">
+        {onCancel && (
+          <Button variant="ghost" size="sm" onClick={handleCancel}>Cancel</Button>
+        )}
+        <Button variant="outline" size="sm" onClick={handleSaveDraft}>
+          <Save className="mr-1 h-4 w-4" />Save Draft
+        </Button>
+        <Button size="sm" onClick={handleSubmit}>
+          <Send className="mr-1 h-4 w-4" />Submit Lead
+        </Button>
+      </div>
     </div>
   );
 }
