@@ -7,18 +7,75 @@ export interface User {
   role: UserRole;
 }
 
-export type CampaignPlatform = "Meta" | "Google" | "LinkedIn" | "Other";
+export type CampaignPlatform = "Meta" | "Google" | "LinkedIn" | "YouTube" | "Referral" | "Offline Event";
+export type CampaignObjective = "Lead Generation" | "Brand Awareness" | "Webinar" | "Course Promotion";
+export type CampaignApprovalStatus = "Draft" | "Active" | "Paused" | "Completed" | "Archived";
+export type AudienceType = "Cold" | "Retargeting" | "Lookalike" | "Custom Audience";
+export type RetargetingSource = "Website Visitors" | "Video Views" | "Lead Form";
+export type AdType = "Image" | "Video" | "Carousel" | "Reel";
+export type LeadQuality = "Hot" | "Warm" | "Cold";
+
+export interface AdCreative {
+  id: string;
+  adType: AdType;
+  creativeHook: string;
+  primaryMessage: string;
+  cta: string;
+}
+
+export interface AdSet {
+  id: string;
+  campaignId: string;
+  name: string;
+  audienceType: AudienceType;
+  sourceAudience: string;
+  retargetingSource: RetargetingSource | "";
+  ads: AdCreative[];
+}
+
+export interface UTMTracking {
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent: string;
+  utmTerm: string;
+}
+
+export interface LandingPage {
+  id: string;
+  campaignId: string;
+  url: string;
+  pageVersion: string;
+  conversionRate: number;
+}
 
 export interface Campaign {
   id: string;
   name: string;
   platform: CampaignPlatform;
+  objective: CampaignObjective;
   budget: number;
+  dailyBudget: number;
   startDate: string;
   endDate: string;
+  targetLocation: string;
   leadsGenerated: number;
   costPerLead: number;
   createdAt: string;
+  // Targeting (paid platforms)
+  ageGroup: string;
+  educationLevel: string;
+  interestCategory: string;
+  targetCity: string;
+  // Team
+  marketingManager: string;
+  campaignOwner: string;
+  campaignNotes: string;
+  approvalStatus: CampaignApprovalStatus;
+  // Nested
+  adSets: AdSet[];
+  utmTracking: UTMTracking;
+  landingPages: LandingPage[];
 }
 
 export type LeadStatus = "New" | "Contacted" | "Follow-up" | "Counseling" | "Qualified" | "Admission" | "Lost";
@@ -34,6 +91,17 @@ export interface Lead {
   assignedTelecallerId: string;
   status: LeadStatus;
   createdAt: string;
+  // Attribution
+  adSetName: string;
+  adName: string;
+  landingPageUrl: string;
+  utm: UTMTracking;
+  // Quality
+  leadScore: number;
+  leadQuality: LeadQuality;
+  budgetRange: string;
+  urgencyLevel: string;
+  otherInstitutes: string;
 }
 
 export type CallOutcome = "Connected" | "Not answered" | "Interested" | "Not interested" | "Call later";

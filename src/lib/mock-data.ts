@@ -1,4 +1,6 @@
-import { Campaign, Lead, CallLog, FollowUp, Admission, User, PaymentHistoryEntry } from "./types";
+import { Campaign, Lead, CallLog, FollowUp, Admission, User, UTMTracking } from "./types";
+
+const defaultUtm: UTMTracking = { utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "" };
 
 export const mockUsers: User[] = [
   { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", role: "admin" },
@@ -9,21 +11,61 @@ export const mockUsers: User[] = [
 ];
 
 export const mockCampaigns: Campaign[] = [
-  { id: "c1", name: "Summer Coding Bootcamp", platform: "Meta", budget: 50000, startDate: "2026-03-01", endDate: "2026-03-31", leadsGenerated: 120, costPerLead: 417, createdAt: "2026-03-01" },
-  { id: "c2", name: "Data Science Workshop", platform: "Google", budget: 35000, startDate: "2026-03-10", endDate: "2026-04-10", leadsGenerated: 85, costPerLead: 412, createdAt: "2026-03-10" },
-  { id: "c3", name: "MBA Admissions 2026", platform: "LinkedIn", budget: 75000, startDate: "2026-02-15", endDate: "2026-04-15", leadsGenerated: 200, costPerLead: 375, createdAt: "2026-02-15" },
-  { id: "c4", name: "Digital Marketing Course", platform: "Meta", budget: 25000, startDate: "2026-03-20", endDate: "2026-04-20", leadsGenerated: 60, costPerLead: 417, createdAt: "2026-03-20" },
+  {
+    id: "c1", name: "Summer Coding Bootcamp", platform: "Meta", objective: "Lead Generation",
+    budget: 50000, dailyBudget: 1667, startDate: "2026-03-01", endDate: "2026-03-31",
+    targetLocation: "Mumbai, Delhi", leadsGenerated: 120, costPerLead: 417, createdAt: "2026-03-01",
+    ageGroup: "18-30", educationLevel: "Graduate", interestCategory: "Technology", targetCity: "Mumbai",
+    marketingManager: "u2", campaignOwner: "u2", campaignNotes: "Focus on coding bootcamp ads", approvalStatus: "Active",
+    adSets: [
+      { id: "as1", campaignId: "c1", name: "Cold Audience - Tech", audienceType: "Cold", sourceAudience: "", retargetingSource: "", ads: [
+        { id: "ad1", adType: "Image", creativeHook: "Launch your tech career in 12 weeks", primaryMessage: "Full-stack bootcamp with placement support", cta: "Apply Now" },
+      ] },
+    ],
+    utmTracking: { utmSource: "meta", utmMedium: "paid", utmCampaign: "summer-bootcamp", utmContent: "image-ad-1", utmTerm: "coding bootcamp" },
+    landingPages: [
+      { id: "lp1", campaignId: "c1", url: "https://redapple.com/bootcamp", pageVersion: "V1", conversionRate: 12.5 },
+      { id: "lp2", campaignId: "c1", url: "https://redapple.com/bootcamp-v2", pageVersion: "V2", conversionRate: 18.2 },
+    ],
+  },
+  {
+    id: "c2", name: "Data Science Workshop", platform: "Google", objective: "Lead Generation",
+    budget: 35000, dailyBudget: 1129, startDate: "2026-03-10", endDate: "2026-04-10",
+    targetLocation: "Bangalore, Hyderabad", leadsGenerated: 85, costPerLead: 412, createdAt: "2026-03-10",
+    ageGroup: "22-35", educationLevel: "Post Graduate", interestCategory: "Data Science", targetCity: "Bangalore",
+    marketingManager: "u2", campaignOwner: "u2", campaignNotes: "", approvalStatus: "Active",
+    adSets: [], utmTracking: { utmSource: "google", utmMedium: "paid", utmCampaign: "ds-workshop", utmContent: "", utmTerm: "data science course" },
+    landingPages: [{ id: "lp3", campaignId: "c2", url: "https://redapple.com/data-science", pageVersion: "V1", conversionRate: 9.8 }],
+  },
+  {
+    id: "c3", name: "MBA Admissions 2026", platform: "LinkedIn", objective: "Course Promotion",
+    budget: 75000, dailyBudget: 1250, startDate: "2026-02-15", endDate: "2026-04-15",
+    targetLocation: "Pan India", leadsGenerated: 200, costPerLead: 375, createdAt: "2026-02-15",
+    ageGroup: "24-35", educationLevel: "Graduate", interestCategory: "Business", targetCity: "Delhi",
+    marketingManager: "u2", campaignOwner: "u1", campaignNotes: "Premium MBA campaign", approvalStatus: "Active",
+    adSets: [], utmTracking: { utmSource: "linkedin", utmMedium: "paid", utmCampaign: "mba-2026", utmContent: "", utmTerm: "" },
+    landingPages: [],
+  },
+  {
+    id: "c4", name: "Digital Marketing Course", platform: "Meta", objective: "Lead Generation",
+    budget: 25000, dailyBudget: 833, startDate: "2026-03-20", endDate: "2026-04-20",
+    targetLocation: "Pune, Mumbai", leadsGenerated: 60, costPerLead: 417, createdAt: "2026-03-20",
+    ageGroup: "20-30", educationLevel: "Any", interestCategory: "Marketing", targetCity: "Pune",
+    marketingManager: "u2", campaignOwner: "u2", campaignNotes: "", approvalStatus: "Draft",
+    adSets: [], utmTracking: { utmSource: "meta", utmMedium: "paid", utmCampaign: "dm-course", utmContent: "", utmTerm: "" },
+    landingPages: [],
+  },
 ];
 
 export const mockLeads: Lead[] = [
-  { id: "l1", name: "Aarav Kumar", phone: "9876543210", email: "aarav@email.com", source: "Meta Ad", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u3", status: "New", createdAt: "2026-03-24" },
-  { id: "l2", name: "Diya Singh", phone: "9876543211", email: "diya@email.com", source: "Google Ad", campaignId: "c2", interestedCourse: "Data Science", assignedTelecallerId: "u3", status: "Contacted", createdAt: "2026-03-23" },
-  { id: "l3", name: "Vihaan Reddy", phone: "9876543212", email: "vihaan@email.com", source: "LinkedIn", campaignId: "c3", interestedCourse: "MBA", assignedTelecallerId: "u4", status: "Follow-up", createdAt: "2026-03-22" },
-  { id: "l4", name: "Ananya Joshi", phone: "9876543213", email: "ananya@email.com", source: "Meta Ad", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u4", status: "Counseling", createdAt: "2026-03-21" },
-  { id: "l5", name: "Arjun Nair", phone: "9876543214", email: "arjun@email.com", source: "Google Ad", campaignId: "c2", interestedCourse: "Data Science", assignedTelecallerId: "u3", status: "Qualified", createdAt: "2026-03-20" },
-  { id: "l6", name: "Ishita Chopra", phone: "9876543215", email: "ishita@email.com", source: "LinkedIn", campaignId: "c3", interestedCourse: "MBA", assignedTelecallerId: "u4", status: "Admission", createdAt: "2026-03-19" },
-  { id: "l7", name: "Rohan Das", phone: "9876543216", email: "rohan@email.com", source: "Meta Ad", campaignId: "c4", interestedCourse: "Digital Marketing", assignedTelecallerId: "u3", status: "Lost", createdAt: "2026-03-18" },
-  { id: "l8", name: "Kavya Iyer", phone: "9876543217", email: "kavya@email.com", source: "Walk-in", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u4", status: "New", createdAt: "2026-03-25" },
+  { id: "l1", name: "Aarav Kumar", phone: "9876543210", email: "aarav@email.com", source: "Meta Ad", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u3", status: "New", createdAt: "2026-03-24", adSetName: "Cold Audience - Tech", adName: "Image Ad 1", landingPageUrl: "https://redapple.com/bootcamp", utm: { utmSource: "meta", utmMedium: "paid", utmCampaign: "summer-bootcamp", utmContent: "image-ad-1", utmTerm: "coding bootcamp" }, leadScore: 72, leadQuality: "Warm", budgetRange: "₹30k-50k", urgencyLevel: "Medium", otherInstitutes: "" },
+  { id: "l2", name: "Diya Singh", phone: "9876543211", email: "diya@email.com", source: "Google Ad", campaignId: "c2", interestedCourse: "Data Science", assignedTelecallerId: "u3", status: "Contacted", createdAt: "2026-03-23", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 85, leadQuality: "Hot", budgetRange: "₹50k-1L", urgencyLevel: "High", otherInstitutes: "UpGrad" },
+  { id: "l3", name: "Vihaan Reddy", phone: "9876543212", email: "vihaan@email.com", source: "LinkedIn", campaignId: "c3", interestedCourse: "MBA", assignedTelecallerId: "u4", status: "Follow-up", createdAt: "2026-03-22", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 60, leadQuality: "Warm", budgetRange: "₹2L+", urgencyLevel: "Low", otherInstitutes: "ISB, IIM" },
+  { id: "l4", name: "Ananya Joshi", phone: "9876543213", email: "ananya@email.com", source: "Meta Ad", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u4", status: "Counseling", createdAt: "2026-03-21", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 90, leadQuality: "Hot", budgetRange: "₹30k-50k", urgencyLevel: "High", otherInstitutes: "" },
+  { id: "l5", name: "Arjun Nair", phone: "9876543214", email: "arjun@email.com", source: "Google Ad", campaignId: "c2", interestedCourse: "Data Science", assignedTelecallerId: "u3", status: "Qualified", createdAt: "2026-03-20", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 88, leadQuality: "Hot", budgetRange: "₹50k-1L", urgencyLevel: "High", otherInstitutes: "" },
+  { id: "l6", name: "Ishita Chopra", phone: "9876543215", email: "ishita@email.com", source: "LinkedIn", campaignId: "c3", interestedCourse: "MBA", assignedTelecallerId: "u4", status: "Admission", createdAt: "2026-03-19", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 95, leadQuality: "Hot", budgetRange: "₹2L+", urgencyLevel: "High", otherInstitutes: "" },
+  { id: "l7", name: "Rohan Das", phone: "9876543216", email: "rohan@email.com", source: "Meta Ad", campaignId: "c4", interestedCourse: "Digital Marketing", assignedTelecallerId: "u3", status: "Lost", createdAt: "2026-03-18", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 25, leadQuality: "Cold", budgetRange: "", urgencyLevel: "Low", otherInstitutes: "Simplilearn" },
+  { id: "l8", name: "Kavya Iyer", phone: "9876543217", email: "kavya@email.com", source: "Walk-in", campaignId: "c1", interestedCourse: "Full Stack Development", assignedTelecallerId: "u4", status: "New", createdAt: "2026-03-25", adSetName: "", adName: "", landingPageUrl: "", utm: defaultUtm, leadScore: 50, leadQuality: "Warm", budgetRange: "₹20k-40k", urgencyLevel: "Medium", otherInstitutes: "" },
 ];
 
 export const mockCallLogs: CallLog[] = [
@@ -91,4 +133,9 @@ export const store = {
   saveAdmissions: (d: Admission[]) => save(STORAGE_KEYS.admissions, d),
 
   getUsers: () => mockUsers,
+
+  // Reset stored data to pick up new fields
+  resetAll: () => {
+    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+  },
 };
