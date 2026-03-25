@@ -37,6 +37,9 @@ export default function LeadsPage() {
   const handleCreate = () => {
     const newLead: Lead = {
       id: `l${Date.now()}`, ...form, status: "New", createdAt: new Date().toISOString().split("T")[0],
+      adSetName: "", adName: "", landingPageUrl: "",
+      utm: { utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "" },
+      leadScore: 0, leadQuality: "Cold", budgetRange: "", urgencyLevel: "", otherInstitutes: "",
     };
     const updated = [...leads, newLead];
     setLeads(updated);
