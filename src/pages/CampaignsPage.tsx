@@ -273,11 +273,11 @@ export default function CampaignsPage() {
   const admissions = store.getAdmissions();
 
   // ─── Computed Analytics ───
-  const totalSpend = campaigns.reduce((s, c) => s + c.budget, 0);
-  const totalLeads = campaigns.reduce((s, c) => s + c.leadsGenerated, 0);
+  const totalSpend = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
+  const totalLeads = campaigns.reduce((s, c) => s + (c.leadsGenerated || 0), 0);
   const qualifiedLeads = leads.filter((l) => ["Qualified", "Admission"].includes(l.status)).length;
   const admissionCount = admissions.length;
-  const totalRevenue = admissions.reduce((s, a) => s + a.totalFee, 0);
+  const totalRevenue = admissions.reduce((s, a) => s + (a.totalFee || 0), 0);
 
   const cpl = totalLeads > 0 ? totalSpend / totalLeads : 0;
   const cpql = qualifiedLeads > 0 ? totalSpend / qualifiedLeads : 0;
@@ -303,9 +303,9 @@ export default function CampaignsPage() {
 
   // Campaign perf bar chart
   const perfData = campaigns.map((c) => ({
-    name: c.name.length > 18 ? c.name.slice(0, 18) + "…" : c.name,
-    leads: c.leadsGenerated,
-    budget: c.budget / 1000,
+    name: (c.name || "").length > 18 ? c.name.slice(0, 18) + "…" : (c.name || ""),
+    leads: c.leadsGenerated || 0,
+    budget: (c.budget || 0) / 1000,
   }));
 
   const handleCreateCampaign = (c: Campaign) => {
@@ -501,9 +501,9 @@ export default function CampaignsPage() {
                   <td className="p-4">
                     <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-medium text-accent-foreground">{c.platform}</span>
                   </td>
-                  <td className="p-4 text-muted-foreground">{c.objective}</td>
-                  <td className="p-4 text-muted-foreground">₹{c.budget.toLocaleString()}</td>
-                  <td className="p-4 font-medium text-card-foreground">{c.leadsGenerated}</td>
+                  <td className="p-4 text-muted-foreground">{c.objective || "—"}</td>
+                  <td className="p-4 text-muted-foreground">₹{(c.budget || 0).toLocaleString()}</td>
+                  <td className="p-4 font-medium text-card-foreground">{c.leadsGenerated || 0}</td>
                   <td className="p-4 text-muted-foreground">₹{c.costPerLead}</td>
                   <td className="p-4">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -536,8 +536,8 @@ export default function CampaignsPage() {
                   <div><span className="text-muted-foreground">Platform:</span> <span className="font-medium text-card-foreground">{detailCampaign.platform}</span></div>
                   <div><span className="text-muted-foreground">Objective:</span> <span className="font-medium text-card-foreground">{detailCampaign.objective}</span></div>
                   <div><span className="text-muted-foreground">Status:</span> <span className="font-medium text-card-foreground">{detailCampaign.approvalStatus}</span></div>
-                  <div><span className="text-muted-foreground">Budget:</span> <span className="font-medium text-card-foreground">₹{detailCampaign.budget.toLocaleString()}</span></div>
-                  <div><span className="text-muted-foreground">Daily:</span> <span className="font-medium text-card-foreground">₹{detailCampaign.dailyBudget.toLocaleString()}</span></div>
+                  <div><span className="text-muted-foreground">Budget:</span> <span className="font-medium text-card-foreground">₹{(detailCampaign.budget || 0).toLocaleString()}</span></div>
+                  <div><span className="text-muted-foreground">Daily:</span> <span className="font-medium text-card-foreground">₹{(detailCampaign.dailyBudget || 0).toLocaleString()}</span></div>
                   <div><span className="text-muted-foreground">Location:</span> <span className="font-medium text-card-foreground">{detailCampaign.targetLocation || "—"}</span></div>
                   <div><span className="text-muted-foreground">Duration:</span> <span className="font-medium text-card-foreground">{detailCampaign.startDate} → {detailCampaign.endDate}</span></div>
                   <div><span className="text-muted-foreground">Leads:</span> <span className="font-bold text-card-foreground">{detailCampaign.leadsGenerated}</span></div>
