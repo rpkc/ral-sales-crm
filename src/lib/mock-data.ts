@@ -4,21 +4,16 @@ const defaultUtm: UTMTracking = { utmSource: "", utmMedium: "", utmCampaign: "",
 
 /* ═══════ COURSE CATALOG ═══════ */
 export const mockCourses: Course[] = [
-  { id: "cr1", name: "Graphic Design", category: "Design", duration: "2 Months", fee: 15000, placementSupport: false },
-  { id: "cr2", name: "Advanced Excel & Data Entry", category: "IT", duration: "1 Month", fee: 15000, placementSupport: false },
-  { id: "cr3", name: "Digital Marketing Basics", category: "Marketing", duration: "3 Months", fee: 45000, placementSupport: true },
-  { id: "cr4", name: "Social Media Marketing", category: "Marketing", duration: "2 Months", fee: 45000, placementSupport: true },
-  { id: "cr5", name: "UI/UX Design", category: "Design", duration: "3 Months", fee: 90000, placementSupport: true },
-  { id: "cr6", name: "Web Development", category: "Development", duration: "4 Months", fee: 90000, placementSupport: true },
-  { id: "cr7", name: "Motion Graphics & Video Editing", category: "Design", duration: "3 Months", fee: 90000, placementSupport: true },
-  { id: "cr8", name: "Data Science", category: "Data", duration: "6 Months", fee: 118000, placementSupport: true },
-  { id: "cr9", name: "Full Stack Development", category: "Development", duration: "6 Months", fee: 160000, placementSupport: true },
-  { id: "cr10", name: "Digital Marketing Pro", category: "Marketing", duration: "6 Months", fee: 160000, placementSupport: true },
-  { id: "cr11", name: "Interior Design", category: "Design", duration: "8 Months", fee: 190000, placementSupport: true },
-  { id: "cr12", name: "AI & Machine Learning", category: "Data", duration: "8 Months", fee: 190000, placementSupport: true },
-  { id: "cr13", name: "Animation & VFX", category: "Design", duration: "12 Months", fee: 260000, placementSupport: true },
-  { id: "cr14", name: "MBA (Business Analytics)", category: "Management", duration: "24 Months", fee: 410000, placementSupport: true },
-  { id: "cr15", name: "MBA (Digital Marketing)", category: "Management", duration: "24 Months", fee: 410000, placementSupport: true },
+  { id: "cr1", name: "Graphic Design", category: "Design", duration: "3 Months", fee: 45000, placementSupport: true },
+  { id: "cr2", name: "UI/UX Design", category: "Design", duration: "4 Months", fee: 90000, placementSupport: true },
+  { id: "cr3", name: "Motion Graphics", category: "Design", duration: "5 Months", fee: 118000, placementSupport: true },
+  { id: "cr4", name: "Web Design", category: "Design", duration: "3 Months", fee: 45000, placementSupport: true },
+  { id: "cr5", name: "HTML & CSS", category: "Development", duration: "1 Month", fee: 15000, placementSupport: false },
+  { id: "cr6", name: "WordPress", category: "Development", duration: "2 Months", fee: 45000, placementSupport: false },
+  { id: "cr7", name: "Digital Marketing", category: "Marketing", duration: "4 Months", fee: 90000, placementSupport: true },
+  { id: "cr8", name: "AI / ML", category: "Data", duration: "8 Months", fee: 260000, placementSupport: true },
+  { id: "cr9", name: "Game Development", category: "Development", duration: "6 Months", fee: 190000, placementSupport: true },
+  { id: "cr10", name: "Full Stack Development", category: "Development", duration: "10 Months", fee: 410000, placementSupport: true },
 ];
 
 export const COURSE_FEE_TIERS = [15000, 45000, 90000, 118000, 160000, 190000, 260000, 410000];
