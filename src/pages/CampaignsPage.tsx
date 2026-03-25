@@ -274,9 +274,11 @@ function AdSetForm({ campaignId, onSave }: { campaignId: string; onSave: (adSet:
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(store.getCampaigns());
   const [createOpen, setCreateOpen] = useState(false);
+  const [leadFormOpen, setLeadFormOpen] = useState(false);
   const [adSetDialog, setAdSetDialog] = useState<string | null>(null);
   const [detailCampaign, setDetailCampaign] = useState<Campaign | null>(null);
   const [view, setView] = useState<"dashboard" | "list">("dashboard");
+  const { currentUser } = useAuth();
 
   const leads = store.getLeads();
   const admissions = store.getAdmissions();
@@ -331,6 +333,13 @@ export default function CampaignsPage() {
     store.saveCampaigns(updated);
     setAdSetDialog(null);
     toast.success("Ad Set added successfully.");
+  };
+
+  const handleCreateLead = (lead: Lead) => {
+    const existing = store.getLeads();
+    const updated = [...existing, lead];
+    store.saveLeads(updated);
+    setLeadFormOpen(false);
   };
 
   return (
