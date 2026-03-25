@@ -1,20 +1,21 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { User, UserRole } from "./types";
 
-// All CRM users — must match mockUsers in mock-data.ts
+// All CRM users with email/password credentials
 const allUsers: User[] = [
-  { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", role: "admin" },
-  { id: "u2", name: "Priya Mehta", email: "priya@redapple.com", role: "marketing_manager" },
-  { id: "u3", name: "Rahul Verma", email: "rahul@redapple.com", role: "telecaller" },
-  { id: "u4", name: "Sneha Patel", email: "sneha@redapple.com", role: "telecaller" },
-  { id: "u5", name: "Neha Gupta", email: "neha@redapple.com", role: "counselor" },
-  { id: "u6", name: "Vikram Singh", email: "vikram@redapple.com", role: "telecalling_manager" },
-  { id: "u7", name: "Rajesh Kapoor", email: "rajesh@redapple.com", role: "owner" },
+  { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", password: "admin123", role: "admin" },
+  { id: "u2", name: "Soumya Saha", email: "soumya@redapple.com", password: "marketing123", role: "marketing_manager" },
+  { id: "u3", name: "Shreya Chakraborty", email: "shreya@redapple.com", password: "telecaller123", role: "telecaller" },
+  { id: "u4", name: "Priya Das", email: "priya@redapple.com", password: "telecaller123", role: "telecaller" },
+  { id: "u5", name: "Manjari Chakraborty", email: "manjari@redapple.com", password: "counselor123", role: "counselor" },
+  { id: "u6", name: "Vikram Singh", email: "vikram@redapple.com", password: "manager123", role: "telecalling_manager" },
+  { id: "u7", name: "Rajesh Kapoor", email: "rajesh@redapple.com", password: "owner123", role: "owner" },
 ];
 
 interface AuthContextValue {
   currentUser: User | null;
-  login: (userId: string) => void;
+  loginByCredentials: (email: string, password: string) => { success: boolean; error?: string };
+  loginById: (userId: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
   allUsers: User[];
@@ -32,7 +33,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  const login = useCallback((userId: string) => {
+  const loginByCredentials = useCallback((email: string, password: string): { success: boolean; error?: string } => {
+    if (!email || !password) return { success: false, error: "Email and password are required." };
+    const user = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    if (!user) return { success: false, error: "Invalid credentials. Please check email or password." };
+    setCurrentUser(user);
+    localStorage.setItem("crm_current_user", JSON.stringify(user));
+    return { success: true };
+  }, []);
+
+  const loginById = useCallback((userId: string) => {
     const user = allUsers.find((u) => u.id === userId);
     if (user) {
       setCurrentUser(user);
@@ -46,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, isAuthenticated: !!currentUser, allUsers }}>
+    <AuthContext.Provider value={{ currentUser, loginByCredentials, loginById, logout, isAuthenticated: !!currentUser, allUsers }}>
       {children}
     </AuthContext.Provider>
   );
@@ -58,7 +68,6 @@ export function useAuth() {
   return ctx;
 }
 
-// Role-based navigation config
 export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = {
   admin: [
     { to: "/", label: "Dashboard" },

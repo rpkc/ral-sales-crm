@@ -4,6 +4,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  password: string;
   role: UserRole;
 }
 
@@ -21,6 +22,20 @@ export type FeePayer = "Self" | "Parent" | "Sponsor";
 export type CommunicationChannel = "Phone Call" | "WhatsApp" | "Email" | "SMS" | "Instagram DM" | "Website Chat";
 export type LostReason = "Too Expensive" | "Not Interested" | "Joined Competitor" | "No Response" | "Wrong Number";
 export type TransferReason = "Language mismatch" | "Course specialization" | "Counselor unavailable";
+export type LeadSourceFormType = "Apply Now" | "Free Counselling" | "Free Callback" | "Register Now" | "Download Brochure" | "Walk-in" | "Referral";
+export type CurrentStatus = "Student" | "Working Professional" | "Fresher" | "Career Switch";
+export type CareerGoal = "Designer" | "Developer" | "Digital Marketer" | "Animator" | "Data Analyst" | "Other";
+export type LeadMotivation = "Job Placement" | "Career Switch" | "Skill Upgrade" | "Portfolio Building";
+export type PreferredStartTime = "Immediate" | "Within 1 Month" | "Within 3 Months" | "Not Sure";
+
+export interface Course {
+  id: string;
+  name: string;
+  category: string;
+  duration: string;
+  fee: number;
+  placementSupport: boolean;
+}
 
 export interface LeadActivity {
   id: string;
@@ -95,23 +110,34 @@ export interface Campaign {
   leadsGenerated: number;
   costPerLead: number;
   createdAt: string;
-  // Targeting (paid platforms)
   ageGroup: string;
   educationLevel: string;
   interestCategory: string;
   targetCity: string;
-  // Team
   marketingManager: string;
   campaignOwner: string;
   campaignNotes: string;
   approvalStatus: CampaignApprovalStatus;
-  // Nested
   adSets: AdSet[];
   utmTracking: UTMTracking;
   landingPages: LandingPage[];
 }
 
-export type LeadStatus = "New" | "Contacted" | "Follow-up" | "Counseling" | "Qualified" | "Admission" | "Lost";
+export type LeadStatus =
+  | "New"
+  | "Contact Attempted"
+  | "Connected"
+  | "Interested"
+  | "Application Submitted"
+  | "Interview Scheduled"
+  | "Interview Completed"
+  | "Counseling"
+  | "Qualified"
+  | "Admission"
+  | "Lost"
+  // Keep old statuses for backward compat
+  | "Contacted"
+  | "Follow-up";
 
 export interface Lead {
   id: string;
@@ -135,39 +161,58 @@ export interface Lead {
   budgetRange: string;
   urgencyLevel: string;
   otherInstitutes: string;
-  // Enrichment (Section 1)
+  // Enrichment
   currentEducation?: string;
   graduationYear?: string;
   currentOccupation?: string;
   collegeInstitution?: string;
   feePayer?: FeePayer;
   decisionMaker?: DecisionMaker;
-  // Intent (Section 2)
+  // New enrichment fields
+  highestQualification?: string;
+  currentStatus?: CurrentStatus;
+  careerGoal?: CareerGoal;
+  preferredStartTime?: PreferredStartTime;
+  leadSourceFormType?: LeadSourceFormType;
+  leadMotivation?: LeadMotivation;
+  // Placement
+  placementInterest?: boolean;
+  expectedSalary?: string;
+  jobLocationPreference?: string;
+  // Intent
   intentScore?: number;
   intentCategory?: LeadIntentCategory;
   lastInteractionType?: string;
   lastInteractionDate?: string;
-  // Temperature (Section 6)
+  // Temperature
   temperature?: LeadTemperature;
-  // Ownership (Section 5)
+  // Ownership
   assignedCounselor?: string;
   leadOwner?: string;
   transferHistory?: LeadTransfer[];
-  // Timeline (Section 3)
+  // Timeline
   activities?: LeadActivity[];
-  // Qualification (Section 9)
+  // Qualification
   qualification?: QualificationChecklist;
   qualificationScore?: number;
-  // Course Recommendation (Section 10)
+  // Course Recommendation
   recommendedCourse?: string;
   alternateCourse?: string;
   recommendationReason?: string;
-  // Lost (Section 13)
+  // Counseling
+  scholarshipDiscussion?: string;
+  emiOption?: boolean;
+  admissionProbability?: "High" | "Medium" | "Low";
+  scholarshipApplied?: boolean;
+  scholarshipPercentage?: number;
+  loanRequired?: boolean;
+  emiSelected?: boolean;
+  // Lost
   lostReason?: LostReason;
-  // SLA (Section 7)
+  // SLA
   firstCallTime?: string;
   firstResponseTime?: string;
-  // Priority (Section 14)
+  // Priority
   priorityScore?: number;
   priorityCategory?: "High Priority" | "Medium Priority" | "Low Priority";
 }
@@ -184,6 +229,8 @@ export interface ConversationInsight {
   placementExpectation?: string;
   biggestConcern?: string;
   preferredStartDate?: string;
+  leadMotivation?: LeadMotivation;
+  objections?: string;
 }
 
 export interface CallLog {
@@ -210,6 +257,8 @@ export interface FollowUp {
   notes: string;
   completed: boolean;
   createdAt: string;
+  followUpType?: FollowUpType;
+  followUpTime?: string;
 }
 
 export type PaymentStatus = "Pending" | "Partial" | "Paid";
@@ -249,4 +298,7 @@ export interface Admission {
   studentBankName: string;
   parentBankName: string;
   createdAt: string;
+  scholarshipApplied?: boolean;
+  scholarshipPercentage?: number;
+  emiSelected?: boolean;
 }
