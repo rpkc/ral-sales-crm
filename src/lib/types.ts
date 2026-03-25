@@ -29,8 +29,15 @@ export type LeadMotivation = "Job Placement" | "Career Switch" | "Skill Upgrade"
 export type PreferredStartTime = "Immediate" | "Within 1 Month" | "Within 3 Months" | "Not Sure";
 export type CallOutcomeType = "Connected" | "Not Answered" | "Call Later" | "Interested" | "Not Interested" | "Wrong Number" | "Switched Off" | "Invalid Number";
 export type ObjectionType = "Course Too Expensive" | "Timing Issue" | "Location Issue" | "Not Sure About Career" | "Need Parent Approval" | "Already Joined Another Institute" | "Just Researching" | "Need More Time";
-export type FollowUpTypeSchema = "Phone Call" | "WhatsApp" | "Email" | "Counseling Meeting" | "Campus Visit" | "Demo Class" | "Zoom Meeting";
+export type FollowUpTypeSchema = "Phone Call" | "WhatsApp" | "Email" | "Counseling Meeting" | "Campus Visit" | "Demo Class" | "Zoom Meeting" | "In-person Meeting" | "Parent Discussion";
 export type PaymentModeSchema = "Cash" | "Cheque" | "Online Transfer" | "UPI" | "Credit Card" | "Debit Card" | "Net Banking";
+
+// Walk-in types
+export type WalkInStatus = "Not Scheduled" | "Scheduled" | "Completed" | "No Show";
+export type CounselingOutcome = "Strong Admission Intent" | "Interested but Needs Time" | "Fee Discussion Pending" | "Parent Approval Pending" | "Not Interested";
+export type FeeCommitment = "Full Admission Fee" | "Registration Fee" | "Seat Booking Token" | "EMI Plan";
+export type DocumentStatus = "Documents Submitted" | "Documents Pending" | "Verification Pending";
+export type JoiningFailureReason = "Fee Arrangement Issue" | "Parents Reluctant" | "Document Issues" | "Student Not Responding" | "Joined Another Institute" | "Follow-Up Missed";
 export type AdmissionProbabilityType = "Very High" | "High" | "Medium" | "Low" | "Very Low";
 
 export interface Course {
@@ -220,6 +227,29 @@ export interface Lead {
   // Priority
   priorityScore?: number;
   priorityCategory?: "High Priority" | "Medium Priority" | "Low Priority";
+  // Walk-in counseling
+  walkInStatus?: WalkInStatus;
+  walkInDate?: string;
+  walkInTime?: string;
+  walkInCounselor?: string;
+  // Counseling outcome
+  counselingOutcome?: CounselingOutcome;
+  // Date of Joining
+  expectedDOJ?: string;
+  feeCommitment?: FeeCommitment;
+  totalEmisPlanned?: number;
+  firstEmiDate?: string;
+  // Document tracking
+  documentStatus?: DocumentStatus;
+  documentsChecklist?: {
+    idProof: boolean;
+    addressProof: boolean;
+    educationCertificate: boolean;
+    photographs: boolean;
+  };
+  // Joining tracking
+  joiningFailureReason?: JoiningFailureReason;
+  joiningDelayed?: boolean;
 }
 
 export type CallOutcome = "Connected" | "Not Answered" | "Interested" | "Not Interested" | "Call Later" | "Wrong Number" | "Switched Off" | "Invalid Number" |

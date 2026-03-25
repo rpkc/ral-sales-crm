@@ -74,6 +74,7 @@ export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = 
     { to: "/campaigns", label: "Campaigns" },
     { to: "/leads", label: "Leads" },
     { to: "/telecalling", label: "Telecalling" },
+    { to: "/counseling", label: "Counseling" },
     { to: "/follow-ups", label: "Follow-ups" },
     { to: "/admissions", label: "Admissions" },
   ],
@@ -84,6 +85,7 @@ export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = 
   ],
   counselor: [
     { to: "/", label: "Dashboard" },
+    { to: "/counseling", label: "Counseling" },
     { to: "/leads", label: "Leads" },
     { to: "/follow-ups", label: "Follow-ups" },
     { to: "/admissions", label: "Admissions" },
@@ -104,6 +106,7 @@ export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = 
     { to: "/campaigns", label: "Campaigns" },
     { to: "/leads", label: "Leads" },
     { to: "/telecalling", label: "Telecalling" },
+    { to: "/counseling", label: "Counseling" },
     { to: "/follow-ups", label: "Follow-ups" },
     { to: "/admissions", label: "Admissions" },
   ],

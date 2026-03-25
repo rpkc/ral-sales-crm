@@ -140,7 +140,7 @@ export const mockLeads: Lead[] = [
       { id: "a6", leadId: "l3", type: "Lead Created", description: "Lead from LinkedIn campaign", timestamp: "2026-03-22T08:00:00" },
       { id: "a7", leadId: "l3", type: "Call Connected", description: "Busy, asked to call after 5 PM", channel: "Phone Call", userId: "u4", timestamp: "2026-03-22T14:00:00" },
     ],
-    qualification: { budgetConfirmed: false, courseInterestConfirmed: true, locationPreference: false, startTimeline: false, placementExpectation: true },
+    qualification: { budgetConfirmed: false, courseInterestConfirmed: true, locationPreference: true, startTimeline: false, placementExpectation: true },
     qualificationScore: 40, priorityScore: 55, priorityCategory: "Medium Priority",
   },
   {
@@ -153,13 +153,24 @@ export const mockLeads: Lead[] = [
     leadSourceFormType: "Free Callback", leadMotivation: "Portfolio Building",
     placementInterest: true, expectedSalary: "4 LPA", jobLocationPreference: "Kolkata",
     intentScore: 92, intentCategory: "High Intent", lastInteractionType: "Counseling Done", lastInteractionDate: "2026-03-24",
-    temperature: "Hot", assignedCounselor: "u5", leadOwner: "u5", transferHistory: [
+    temperature: "Hot", assignedCounselor: "u5", leadOwner: "u5",
+    // Walk-in data
+    walkInStatus: "Completed", walkInDate: "2026-03-24", walkInTime: "14:00", walkInCounselor: "u5",
+    counselingOutcome: "Strong Admission Intent",
+    expectedDOJ: "2026-03-28", feeCommitment: "Full Admission Fee",
+    documentStatus: "Documents Pending",
+    documentsChecklist: { idProof: true, addressProof: false, educationCertificate: true, photographs: false },
+    transferHistory: [
       { id: "t1", fromUserId: "u4", toUserId: "u5", reason: "Course specialization", timestamp: "2026-03-22T16:00:00" },
     ],
     activities: [
       { id: "a8", leadId: "l4", type: "Lead Created", description: "Lead from Meta Ad — Free Callback", timestamp: "2026-03-21T09:00:00" },
       { id: "a9", leadId: "l4", type: "Call Connected", description: "Very interested, wants counseling", channel: "Phone Call", userId: "u4", timestamp: "2026-03-21T11:00:00" },
-      { id: "a10", leadId: "l4", type: "Counseling Done", description: "Counseling session completed by Manjari", userId: "u5", timestamp: "2026-03-24T15:00:00" },
+      { id: "a9b", leadId: "l4", type: "Walk-in Scheduled", description: "Walk-in scheduled by telecaller Priya", timestamp: "2026-03-22T11:30:00" },
+      { id: "a10", leadId: "l4", type: "Walk-in Completed", description: "Walk-in counseling session completed", userId: "u5", timestamp: "2026-03-24T14:00:00" },
+      { id: "a10b", leadId: "l4", type: "Ownership Transfer", description: "Ownership transferred to Manjari Chakraborty", timestamp: "2026-03-24T14:01:00" },
+      { id: "a10c", leadId: "l4", type: "Counseling Outcome", description: "Strong Admission Intent", timestamp: "2026-03-24T15:00:00" },
+      { id: "a10d", leadId: "l4", type: "DoJ Set", description: "Expected joining date: 2026-03-28 · Fee: Full Admission Fee", timestamp: "2026-03-24T15:30:00" },
     ],
     qualification: { budgetConfirmed: true, courseInterestConfirmed: true, locationPreference: true, startTimeline: true, placementExpectation: true },
     qualificationScore: 100, recommendedCourse: "UI/UX Design", alternateCourse: "Graphic Design",
@@ -267,12 +278,13 @@ export const mockLeads: Lead[] = [
     leadSourceFormType: "Apply Now", leadMotivation: "Career Switch",
     intentScore: 85, intentCategory: "High Intent", temperature: "Hot", priorityScore: 82, priorityCategory: "High Priority",
     assignedCounselor: "u5",
+    walkInStatus: "Scheduled", walkInDate: "2026-03-26", walkInTime: "11:00", walkInCounselor: "u5",
     qualification: { budgetConfirmed: true, courseInterestConfirmed: true, locationPreference: true, startTimeline: true, placementExpectation: true },
     qualificationScore: 100, admissionProbability: "High",
     activities: [
       { id: "a23", leadId: "l12", type: "Lead Created", description: "Google Ad — Apply Now", timestamp: "2026-03-19T08:00:00" },
       { id: "a24", leadId: "l12", type: "Call Connected", description: "Budget confirmed, wants counseling", channel: "Phone Call", userId: "u3", timestamp: "2026-03-19T10:30:00" },
-      { id: "a25", leadId: "l12", type: "Counseling Done", description: "Counseling completed — ready for admission", userId: "u5", timestamp: "2026-03-22T16:00:00" },
+      { id: "a25", leadId: "l12", type: "Walk-in Scheduled", description: "Walk-in counseling scheduled for 2026-03-26 at 11:00", timestamp: "2026-03-22T16:00:00" },
     ],
   },
   {
@@ -436,11 +448,45 @@ export const mockLeads: Lead[] = [
     leadSourceFormType: "Free Counselling", leadMotivation: "Job Placement",
     intentScore: 74, intentCategory: "Medium Intent", temperature: "Warm", priorityScore: 76, priorityCategory: "High Priority",
     assignedCounselor: "u5",
+    walkInStatus: "Completed", walkInDate: "2026-03-21", walkInTime: "14:00", walkInCounselor: "u5",
+    counselingOutcome: "Fee Discussion Pending",
     qualification: { budgetConfirmed: true, courseInterestConfirmed: true, locationPreference: true, startTimeline: false, placementExpectation: true },
     qualificationScore: 80,
     activities: [
       { id: "a46", leadId: "l25", type: "Lead Created", description: "Instagram DM inquiry", timestamp: "2026-03-18T09:00:00" },
-      { id: "a47", leadId: "l25", type: "Counseling Done", description: "Counseling session done", userId: "u5", timestamp: "2026-03-21T14:00:00" },
+      { id: "a47", leadId: "l25", type: "Walk-in Completed", description: "Walk-in counseling completed", userId: "u5", timestamp: "2026-03-21T14:00:00" },
+      { id: "a47b", leadId: "l25", type: "Counseling Outcome", description: "Fee Discussion Pending", timestamp: "2026-03-21T15:00:00" },
+    ],
+  },
+  // Walk-in scheduled for today (l26)
+  {
+    id: "l26", name: "Soumya Ray", phone: "9876543235", email: "soumya.r@email.com", source: "Walk-in", campaignId: "c1",
+    interestedCourse: "Digital Marketing", assignedTelecallerId: "u3", status: "Interested", createdAt: "2026-03-23",
+    leadScore: 72, leadQuality: "Warm", budgetRange: "₹90k", urgencyLevel: "Medium",
+    highestQualification: "B.Com", currentStatus: "Working Professional", careerGoal: "Digital Marketer", preferredStartTime: "Within 1 Month",
+    leadSourceFormType: "Free Counselling", leadMotivation: "Skill Upgrade",
+    intentScore: 70, intentCategory: "Medium Intent", temperature: "Warm", priorityScore: 72, priorityCategory: "High Priority",
+    assignedCounselor: "u5",
+    walkInStatus: "Scheduled", walkInDate: "2026-03-25", walkInTime: "10:30", walkInCounselor: "u5",
+    activities: [
+      { id: "a48", leadId: "l26", type: "Lead Created", description: "Walk-in inquiry via telecaller", timestamp: "2026-03-23T09:00:00" },
+      { id: "a49", leadId: "l26", type: "Call Connected", description: "Interested in Digital Marketing", channel: "Phone Call", userId: "u3", timestamp: "2026-03-23T10:00:00" },
+      { id: "a50", leadId: "l26", type: "Walk-in Scheduled", description: "Walk-in scheduled for 2026-03-25 at 10:30", timestamp: "2026-03-23T10:15:00" },
+    ],
+  },
+  // Walk-in No Show (l27)
+  {
+    id: "l27", name: "Arnab Bhattacharya", phone: "9876543236", email: "arnab.b@email.com", source: "Google Ad", campaignId: "c2",
+    interestedCourse: "AI / ML", assignedTelecallerId: "u4", status: "Interested", createdAt: "2026-03-20",
+    leadScore: 65, leadQuality: "Warm", budgetRange: "₹2.6L", urgencyLevel: "Medium",
+    highestQualification: "B.Tech", currentStatus: "Working Professional", careerGoal: "Full Stack Developer",
+    intentScore: 60, intentCategory: "Medium Intent", temperature: "Warm", priorityScore: 65, priorityCategory: "Medium Priority",
+    assignedCounselor: "u5",
+    walkInStatus: "No Show", walkInDate: "2026-03-24", walkInTime: "11:00", walkInCounselor: "u5",
+    activities: [
+      { id: "a51", leadId: "l27", type: "Lead Created", description: "Google Ad lead", timestamp: "2026-03-20T09:00:00" },
+      { id: "a52", leadId: "l27", type: "Walk-in Scheduled", description: "Walk-in scheduled for 2026-03-24", timestamp: "2026-03-21T11:00:00" },
+      { id: "a53", leadId: "l27", type: "Walk-in No Show", description: "Student did not show up", timestamp: "2026-03-24T12:00:00" },
     ],
   },
 ];

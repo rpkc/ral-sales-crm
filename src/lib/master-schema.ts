@@ -72,7 +72,31 @@ export const MASTER_OBJECTIONS = [
 ] as const;
 
 export const MASTER_FOLLOWUP_TYPES = [
-  "Phone Call", "WhatsApp", "Email", "Counseling Meeting", "Campus Visit", "Demo Class", "Zoom Meeting",
+  "Phone Call", "WhatsApp", "Email", "Counseling Meeting", "Campus Visit", "Demo Class", "Zoom Meeting", "In-person Meeting", "Parent Discussion",
+] as const;
+
+export const MASTER_WALKIN_STATUS = [
+  "Not Scheduled", "Scheduled", "Completed", "No Show",
+] as const;
+
+export const MASTER_COUNSELING_OUTCOMES = [
+  "Strong Admission Intent", "Interested but Needs Time", "Fee Discussion Pending", "Parent Approval Pending", "Not Interested",
+] as const;
+
+export const MASTER_FEE_COMMITMENTS = [
+  "Full Admission Fee", "Registration Fee", "Seat Booking Token", "EMI Plan",
+] as const;
+
+export const MASTER_DOCUMENT_STATUS = [
+  "Documents Submitted", "Documents Pending", "Verification Pending",
+] as const;
+
+export const MASTER_JOINING_FAILURE_REASONS = [
+  "Fee Arrangement Issue", "Parents Reluctant", "Document Issues", "Student Not Responding", "Joined Another Institute", "Follow-Up Missed",
+] as const;
+
+export const MASTER_COUNSELOR_FOLLOWUP_TYPES = [
+  "Phone Call", "WhatsApp", "In-person Meeting", "Parent Discussion",
 ] as const;
 
 export const MASTER_PAYMENT_MODES = [

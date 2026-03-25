@@ -11,6 +11,7 @@ import LeadsPage from "@/pages/LeadsPage";
 import TelecallingPage from "@/pages/TelecallingPage";
 import FollowUpsPage from "@/pages/FollowUpsPage";
 import AdmissionsPage from "@/pages/AdmissionsPage";
+import CounselingPage from "@/pages/CounselingPage";
 import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/NotFound";
 
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/leads" element={<LeadsPage />} />
         <Route path="/telecalling" element={<TelecallingPage />} />
         <Route path="/follow-ups" element={<FollowUpsPage />} />
+        <Route path="/counseling" element={<CounselingPage />} />
         <Route path="/admissions" element={<AdmissionsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
