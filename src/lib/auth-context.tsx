@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { User, UserRole } from "./types";
 
-// All CRM users with email/password credentials
 const allUsers: User[] = [
   { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", password: "admin123", role: "admin" },
   { id: "u2", name: "Soumya Saha", email: "soumya@redapple.com", password: "marketing123", role: "marketing_manager" },
@@ -25,11 +24,13 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("crm_current_user");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return allUsers.find((u) => u.id === parsed.id) || null;
-    }
+    try {
+      const stored = localStorage.getItem("crm_current_user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return allUsers.find((u) => u.id === parsed.id) || null;
+      }
+    } catch {}
     return null;
   });
 
