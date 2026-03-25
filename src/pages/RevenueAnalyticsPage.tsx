@@ -32,7 +32,7 @@ const STORAGE_KEY = "crm_revenue_targets";
 function getTargets() {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) return JSON.parse(stored);
-  return { monthlyTarget: 800000, roasTarget: 16, maxCPA: 6000 };
+  return { monthlyTarget: 600000, roasTarget: 10, maxCPA: 6500 };
 }
 function saveTargets(t: { monthlyTarget: number; roasTarget: number; maxCPA: number }) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(t));

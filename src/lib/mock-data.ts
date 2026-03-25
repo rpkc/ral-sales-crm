@@ -24,6 +24,16 @@ export function getFeeBand(fee: number): string {
   return "High Ticket";
 }
 
+/* ═══════ BUSINESS BENCHMARKS ═══════ */
+export const BENCHMARKS = {
+  monthlyMarketingSpend: 40000,
+  monthlyBilling: 600000,
+  cpaMin: 5500,
+  cpaMax: 6500,
+  marketingSpendRatioMax: 10,
+  minROAS: 10,
+};
+
 /* ═══════ USERS ═══════ */
 export const mockUsers: User[] = [
   { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", password: "admin123", role: "admin" },
@@ -39,8 +49,8 @@ export const mockUsers: User[] = [
 export const mockCampaigns: Campaign[] = [
   {
     id: "c1", name: "Summer Coding Bootcamp", platform: "Meta", objective: "Lead Generation",
-    budget: 18000, dailyBudget: 600, startDate: "2026-03-01", endDate: "2026-03-31",
-    targetLocation: "Kolkata, Delhi", leadsGenerated: 120, costPerLead: 150, createdAt: "2026-03-01",
+    budget: 15000, dailyBudget: 500, startDate: "2026-03-01", endDate: "2026-03-31",
+    targetLocation: "Kolkata, Delhi", leadsGenerated: 95, costPerLead: 158, createdAt: "2026-03-01",
     ageGroup: "18-30", educationLevel: "Graduate", interestCategory: "Technology", targetCity: "Kolkata",
     marketingManager: "u2", campaignOwner: "u2", campaignNotes: "Focus on coding bootcamp ads", approvalStatus: "Active",
     adSets: [
@@ -56,8 +66,8 @@ export const mockCampaigns: Campaign[] = [
   },
   {
     id: "c2", name: "AI & Data Science Push", platform: "Google", objective: "Lead Generation",
-    budget: 15000, dailyBudget: 500, startDate: "2026-03-10", endDate: "2026-04-10",
-    targetLocation: "Kolkata, Bangalore", leadsGenerated: 85, costPerLead: 176, createdAt: "2026-03-10",
+    budget: 12000, dailyBudget: 400, startDate: "2026-03-10", endDate: "2026-04-10",
+    targetLocation: "Kolkata, Bangalore", leadsGenerated: 70, costPerLead: 171, createdAt: "2026-03-10",
     ageGroup: "22-35", educationLevel: "Post Graduate", interestCategory: "Data Science", targetCity: "Kolkata",
     marketingManager: "u2", campaignOwner: "u2", campaignNotes: "", approvalStatus: "Active",
     adSets: [], utmTracking: { utmSource: "google", utmMedium: "paid", utmCampaign: "ai-ml-push", utmContent: "", utmTerm: "data science course" },
@@ -65,8 +75,8 @@ export const mockCampaigns: Campaign[] = [
   },
   {
     id: "c3", name: "Creative Design Sprint", platform: "LinkedIn", objective: "Course Promotion",
-    budget: 12000, dailyBudget: 400, startDate: "2026-02-15", endDate: "2026-04-15",
-    targetLocation: "Pan India", leadsGenerated: 200, costPerLead: 60, createdAt: "2026-02-15",
+    budget: 8000, dailyBudget: 267, startDate: "2026-02-15", endDate: "2026-04-15",
+    targetLocation: "Pan India", leadsGenerated: 55, costPerLead: 145, createdAt: "2026-02-15",
     ageGroup: "18-28", educationLevel: "Graduate", interestCategory: "Design", targetCity: "Kolkata",
     marketingManager: "u2", campaignOwner: "u1", campaignNotes: "Promote Graphic Design, UI/UX, Motion Graphics", approvalStatus: "Active",
     adSets: [], utmTracking: { utmSource: "linkedin", utmMedium: "paid", utmCampaign: "design-sprint", utmContent: "", utmTerm: "" },
@@ -74,8 +84,8 @@ export const mockCampaigns: Campaign[] = [
   },
   {
     id: "c4", name: "Digital Marketing Course", platform: "Meta", objective: "Lead Generation",
-    budget: 8000, dailyBudget: 267, startDate: "2026-03-20", endDate: "2026-04-20",
-    targetLocation: "Kolkata", leadsGenerated: 60, costPerLead: 133, createdAt: "2026-03-20",
+    budget: 5000, dailyBudget: 167, startDate: "2026-03-20", endDate: "2026-04-20",
+    targetLocation: "Kolkata", leadsGenerated: 35, costPerLead: 143, createdAt: "2026-03-20",
     ageGroup: "20-30", educationLevel: "Any", interestCategory: "Marketing", targetCity: "Kolkata",
     marketingManager: "u2", campaignOwner: "u2", campaignNotes: "", approvalStatus: "Draft",
     adSets: [], utmTracking: { utmSource: "meta", utmMedium: "paid", utmCampaign: "dm-course", utmContent: "", utmTerm: "" },
