@@ -26,6 +26,7 @@ import {
   Send, Calendar, Eye, ChevronRight, BarChart3, ArrowRightLeft, Star,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { KanbanBoard } from "@/components/KanbanBoard";
 
 const STATUSES: LeadStatus[] = ["New", "Contact Attempted", "Connected", "Interested", "Application Submitted", "Interview Scheduled", "Interview Completed", "Counseling", "Qualified", "Admission", "Lost"];
 const LOST_REASONS: LostReason[] = ["Too Expensive", "Not Interested", "Joined Competitor", "No Response", "Wrong Number"];
