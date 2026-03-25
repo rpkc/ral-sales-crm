@@ -181,9 +181,8 @@ function CounselorDashboard() {
       </div>
     </div>
   );
-}
-  );
-}
+
+
 
 /* ═══════════════════════════════════════════════════════════════
    MARKETING DASHBOARD
