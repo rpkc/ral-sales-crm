@@ -8,6 +8,8 @@ export const mockUsers: User[] = [
   { id: "u3", name: "Rahul Verma", email: "rahul@redapple.com", role: "telecaller" },
   { id: "u4", name: "Sneha Patel", email: "sneha@redapple.com", role: "telecaller" },
   { id: "u5", name: "Neha Gupta", email: "neha@redapple.com", role: "counselor" },
+  { id: "u6", name: "Vikram Singh", email: "vikram@redapple.com", role: "telecalling_manager" },
+  { id: "u7", name: "Rajesh Kapoor", email: "rajesh@redapple.com", role: "owner" },
 ];
 
 export const mockCampaigns: Campaign[] = [
