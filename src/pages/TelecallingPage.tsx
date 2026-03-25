@@ -586,13 +586,22 @@ export default function TelecallingPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label className="text-xs">Career Goal</Label>
-                            <Input placeholder="e.g. UI/UX Designer" value={outcomeForm.insight.careerGoal || ""}
-                              onChange={(e) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, careerGoal: e.target.value } })} className="h-8 text-sm" />
+                            <Select value={outcomeForm.insight.careerGoal || ""} onValueChange={(v) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, careerGoal: v } })}>
+                              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                              <SelectContent>{MASTER_CAREER_GOALS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label className="text-xs">Budget Expectation</Label>
                             <Input placeholder="e.g. ₹30k-50k" value={outcomeForm.insight.budgetRange || ""}
                               onChange={(e) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, budgetRange: e.target.value } })} className="h-8 text-sm" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Lead Motivation</Label>
+                            <Select value={outcomeForm.insight.leadMotivation || ""} onValueChange={(v) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, leadMotivation: v as any } })}>
+                              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                              <SelectContent>{MASTER_LEAD_MOTIVATIONS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label className="text-xs">Preferred Learning Mode</Label>
@@ -620,6 +629,13 @@ export default function TelecallingPage() {
                             <Label className="text-xs">Placement Expectation</Label>
                             <Input placeholder="e.g. Within 6 months" value={outcomeForm.insight.placementExpectation || ""}
                               onChange={(e) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, placementExpectation: e.target.value } })} className="h-8 text-sm" />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Objections</Label>
+                            <Select value={outcomeForm.insight.objections || ""} onValueChange={(v) => setOutcomeForm({ ...outcomeForm, insight: { ...outcomeForm.insight, objections: v } })}>
+                              <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                              <SelectContent>{MASTER_OBJECTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                            </Select>
                           </div>
                           <div>
                             <Label className="text-xs">Preferred Start Date</Label>
