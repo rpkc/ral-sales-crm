@@ -453,6 +453,22 @@ function OwnerDashboard() {
   const courses = store.getCourses();
   const today = new Date().toISOString().split("T")[0];
 
+  // ── Multi-Vertical Data ──
+  const internshipAdmissions = store.getInternshipAdmissions();
+  const collegePrograms = store.getCollegePrograms();
+  const schoolPrograms = store.getSchoolPrograms();
+  const collegeAccounts = store.getCollegeAccounts();
+  const schoolAccounts = store.getSchoolAccounts();
+  const internshipLeads = leads.filter(l => l.programChannel === "Internship Program");
+  const individualLeads = leads.filter(l => !l.programChannel || l.programChannel === "Individual Course Admission");
+
+  // ── Vertical Revenue ──
+  const individualRevenue = admissions.reduce((s, a) => s + (a.totalFee || 0), 0);
+  const internshipRevenue = internshipAdmissions.reduce((s, a) => s + (a.fee || 0), 0);
+  const collegeRevenue = collegePrograms.reduce((s, p) => s + (p.totalRevenue || 0), 0);
+  const schoolRevenue = schoolPrograms.reduce((s, p) => s + (p.totalRevenue || 0), 0);
+  const totalMultiVerticalRevenue = individualRevenue + internshipRevenue + collegeRevenue + schoolRevenue;
+
   // ── Core Financial Metrics ──
   const totalRevenue = admissions.reduce((s, a) => s + (a.totalFee || 0), 0);
   const totalCollected = admissions.reduce((s, a) => s + (a.paymentHistory?.reduce((ps, p) => ps + (p.amountPaid || 0), 0) || 0), 0);
