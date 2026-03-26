@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import {
   Phone, PhoneCall, Users, Target, Calendar, GraduationCap, Megaphone,
   TrendingUp, DollarSign, Activity, Shield, Clock, Star, Zap, BarChart3,
-  UserPlus, Settings, AlertTriangle, Timer, Download, ArrowUpRight, CheckCircle2, FileText
+  UserPlus, Settings, AlertTriangle, Timer, Download, ArrowUpRight, CheckCircle2, FileText,
+  Building2, School,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -453,6 +454,22 @@ function OwnerDashboard() {
   const courses = store.getCourses();
   const today = new Date().toISOString().split("T")[0];
 
+  // ── Multi-Vertical Data ──
+  const internshipAdmissions = store.getInternshipAdmissions();
+  const collegePrograms = store.getCollegePrograms();
+  const schoolPrograms = store.getSchoolPrograms();
+  const collegeAccounts = store.getCollegeAccounts();
+  const schoolAccounts = store.getSchoolAccounts();
+  const internshipLeads = leads.filter(l => l.programChannel === "Internship Program");
+  const individualLeads = leads.filter(l => !l.programChannel || l.programChannel === "Individual Course Admission");
+
+  // ── Vertical Revenue ──
+  const individualRevenue = admissions.reduce((s, a) => s + (a.totalFee || 0), 0);
+  const internshipRevenue = internshipAdmissions.reduce((s, a) => s + (a.fee || 0), 0);
+  const collegeRevenue = collegePrograms.reduce((s, p) => s + (p.totalRevenue || 0), 0);
+  const schoolRevenue = schoolPrograms.reduce((s, p) => s + (p.totalRevenue || 0), 0);
+  const totalMultiVerticalRevenue = individualRevenue + internshipRevenue + collegeRevenue + schoolRevenue;
+
   // ── Core Financial Metrics ──
   const totalRevenue = admissions.reduce((s, a) => s + (a.totalFee || 0), 0);
   const totalCollected = admissions.reduce((s, a) => s + (a.paymentHistory?.reduce((ps, p) => ps + (p.amountPaid || 0), 0) || 0), 0);
@@ -682,7 +699,7 @@ function OwnerDashboard() {
           <p className="text-xs sm:text-sm text-muted-foreground">Financial & operational command center</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {["overview", "revenue", "pipeline", "team", "marketing", "insights"].map((tab) => (
+          {["overview", "revenue", "verticals", "pipeline", "team", "marketing", "insights"].map((tab) => (
             <button key={tab} onClick={() => setActiveSection(tab)}
               className={`rounded-lg px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium capitalize transition-colors ${activeSection === tab ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent"}`}>
               {tab}
@@ -953,7 +970,140 @@ function OwnerDashboard() {
         </div>
       )}
 
-      {/* ── SECTION 9: Telecaller Performance ── */}
+      {/* ── VERTICALS TAB: 4-Channel Revenue View ── */}
+      {(activeSection === "verticals") && (
+        <>
+          {/* Revenue Blocks — Section 24 & 25 */}
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-card p-5 shadow-card border-l-4 border-primary">
+              <p className="text-xs text-muted-foreground">Individual Admissions</p>
+              <p className="mt-1 text-xl font-bold text-card-foreground">₹{individualRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{admissions.length} students</p>
+            </div>
+            <div className="rounded-xl bg-card p-5 shadow-card border-l-4 border-warning">
+              <p className="text-xs text-muted-foreground">Internship Revenue</p>
+              <p className="mt-1 text-xl font-bold text-card-foreground">₹{internshipRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{internshipAdmissions.length} interns</p>
+            </div>
+            <div className="rounded-xl bg-card p-5 shadow-card border-l-4 border-info">
+              <p className="text-xs text-muted-foreground">College Program Revenue</p>
+              <p className="mt-1 text-xl font-bold text-card-foreground">₹{collegeRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{collegeAccounts.length} colleges · {collegePrograms.length} programs</p>
+            </div>
+            <div className="rounded-xl bg-card p-5 shadow-card border-l-4 border-success">
+              <p className="text-xs text-muted-foreground">School Program Revenue</p>
+              <p className="mt-1 text-xl font-bold text-card-foreground">₹{schoolRevenue.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">{schoolAccounts.length} schools · {schoolPrograms.length} programs</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-card p-5 shadow-card">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-card-foreground">Total Revenue Summary</h3>
+              <span className="text-lg font-bold text-primary">₹{totalMultiVerticalRevenue.toLocaleString()}</span>
+            </div>
+            <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
+              {totalMultiVerticalRevenue > 0 && (
+                <>
+                  <div className="h-full bg-primary" style={{ width: `${(individualRevenue / totalMultiVerticalRevenue) * 100}%` }} title="Individual" />
+                  <div className="h-full bg-warning" style={{ width: `${(internshipRevenue / totalMultiVerticalRevenue) * 100}%` }} title="Internship" />
+                  <div className="h-full bg-info" style={{ width: `${(collegeRevenue / totalMultiVerticalRevenue) * 100}%` }} title="College" />
+                  <div className="h-full bg-success" style={{ width: `${(schoolRevenue / totalMultiVerticalRevenue) * 100}%` }} title="School" />
+                </>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-4 mt-2 text-xs">
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-primary" /> Individual ({totalMultiVerticalRevenue > 0 ? ((individualRevenue / totalMultiVerticalRevenue) * 100).toFixed(0) : 0}%)</span>
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-warning" /> Internship ({totalMultiVerticalRevenue > 0 ? ((internshipRevenue / totalMultiVerticalRevenue) * 100).toFixed(0) : 0}%)</span>
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-info" /> College ({totalMultiVerticalRevenue > 0 ? ((collegeRevenue / totalMultiVerticalRevenue) * 100).toFixed(0) : 0}%)</span>
+              <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-success" /> School ({totalMultiVerticalRevenue > 0 ? ((schoolRevenue / totalMultiVerticalRevenue) * 100).toFixed(0) : 0}%)</span>
+            </div>
+          </div>
+
+          {/* Section 26: Three Funnels */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* B2C Funnel */}
+            <div className="rounded-xl bg-card p-5 shadow-card">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">B2C Funnel</h4>
+              <div className="space-y-1">
+                {["New", "Contacted", "Follow-up", "Counseling", "Admission"].map((s, i) => {
+                  const count = individualLeads.filter(l => l.status === s).length;
+                  const max = Math.max(...["New", "Contacted", "Follow-up", "Counseling", "Admission"].map(st => individualLeads.filter(l => l.status === st).length), 1);
+                  return (
+                    <div key={s} className="flex items-center gap-2">
+                      <span className="w-20 text-[10px] text-muted-foreground truncate">{s}</span>
+                      <div className="flex-1 h-4 bg-muted rounded overflow-hidden">
+                        <div className="h-full rounded bg-primary flex items-center px-1" style={{ width: `${Math.max((count / max) * 100, count > 0 ? 10 : 0)}%` }}>
+                          <span className="text-[8px] font-medium text-primary-foreground">{count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Internship Funnel */}
+            <div className="rounded-xl bg-card p-5 shadow-card">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Internship Funnel</h4>
+              <div className="space-y-1">
+                {["Internship Lead", "Call Attempted", "Internship Discussion", "Proposal Shared", "Internship Confirmed", "Batch Start"].map((s) => {
+                  const count = internshipLeads.filter(l => l.internshipPipelineStage === s).length;
+                  const max = Math.max(...["Internship Lead", "Call Attempted", "Internship Discussion", "Proposal Shared", "Internship Confirmed", "Batch Start"].map(st => internshipLeads.filter(l => l.internshipPipelineStage === st).length), 1);
+                  return (
+                    <div key={s} className="flex items-center gap-2">
+                      <span className="w-24 text-[10px] text-muted-foreground truncate">{s.replace("Internship ", "")}</span>
+                      <div className="flex-1 h-4 bg-muted rounded overflow-hidden">
+                        <div className="h-full rounded bg-warning flex items-center px-1" style={{ width: `${Math.max((count / max) * 100, count > 0 ? 10 : 0)}%` }}>
+                          <span className="text-[8px] font-medium text-white">{count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Institutional Funnel */}
+            <div className="rounded-xl bg-card p-5 shadow-card">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Institutional Funnel</h4>
+              <div className="space-y-1">
+                {["Identified", "Meeting Scheduled", "Proposal Shared", "Negotiation", "Agreement Signed", "Program Launch"].map((s) => {
+                  const collegeCount = collegeAccounts.filter(c => c.pipelineStage === s || c.pipelineStage === `College ${s}`).length;
+                  const schoolCount = schoolAccounts.filter(sc => sc.pipelineStage === s || sc.pipelineStage === `School ${s}`).length;
+                  const total = collegeCount + schoolCount;
+                  return (
+                    <div key={s} className="flex items-center gap-2">
+                      <span className="w-24 text-[10px] text-muted-foreground truncate">{s}</span>
+                      <div className="flex-1 h-4 bg-muted rounded overflow-hidden flex">
+                        {collegeCount > 0 && <div className="h-full bg-info flex items-center px-1" style={{ width: `${(collegeCount / Math.max(total, 1)) * 100}%` }}><span className="text-[8px] font-medium text-white">{collegeCount}</span></div>}
+                        {schoolCount > 0 && <div className="h-full bg-success flex items-center px-1" style={{ width: `${(schoolCount / Math.max(total, 1)) * 100}%` }}><span className="text-[8px] font-medium text-white">{schoolCount}</span></div>}
+                      </div>
+                      <span className="w-6 text-[10px] text-right text-muted-foreground">{total}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-3 mt-2 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-info" /> Colleges</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-success" /> Schools</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Institutional KPIs */}
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+            <StatCard title="Colleges Contacted" value={collegeAccounts.length} icon={<Building2 className="h-5 w-5" />} />
+            <StatCard title="Schools Contacted" value={schoolAccounts.length} icon={<School className="h-5 w-5" />} />
+            <StatCard title="Meetings Scheduled" value={collegeAccounts.filter(c => c.pipelineStage === "Meeting Scheduled").length + schoolAccounts.filter(s => s.pipelineStage === "Meeting Scheduled").length} icon={<Calendar className="h-5 w-5" />} />
+            <StatCard title="Programs Signed" value={collegeAccounts.filter(c => c.pipelineStage === "Agreement Signed" || c.pipelineStage === "Program Launch").length + schoolAccounts.filter(s => s.pipelineStage === "Agreement Signed" || s.pipelineStage === "Program Launch").length} icon={<Target className="h-5 w-5" />} />
+            <StatCard title="Internship Conv." value={internshipAdmissions.length} icon={<GraduationCap className="h-5 w-5" />} />
+            <StatCard title="Internship Calls" value={callLogs.filter(cl => internshipLeads.some(l => l.id === cl.leadId)).length} icon={<PhoneCall className="h-5 w-5" />} />
+          </div>
+        </>
+      )}
+
+
       {(activeSection === "overview" || activeSection === "team") && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-xl bg-card p-5 shadow-card">

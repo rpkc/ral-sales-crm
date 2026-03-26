@@ -1,4 +1,13 @@
 import { Campaign, Lead, CallLog, FollowUp, Admission, User, UTMTracking, LeadActivity, Course } from "./types";
+import {
+  CollegeAccount, CollegeProgram, CollegeStudent,
+  SchoolAccount, SchoolProgram, SchoolStudent,
+  InternshipAdmission,
+} from "./vertical-types";
+import {
+  mockInternshipAdmissions, mockCollegeAccounts, mockCollegePrograms, mockCollegeStudents,
+  mockSchoolAccounts, mockSchoolPrograms, mockSchoolStudents, internshipLeadEntries,
+} from "./vertical-data";
 
 const defaultUtm: UTMTracking = { utmSource: "", utmMedium: "", utmCampaign: "", utmContent: "", utmTerm: "" };
 
@@ -839,6 +848,10 @@ export const mockAdmissions: Admission[] = [
   },
 ];
 
+/* ═══════ MERGE INTERNSHIP LEADS INTO MAIN LEADS ═══════ */
+// Add internship leads to the main leads array (cast is safe since Lead interface now supports programChannel)
+const allMockLeads: Lead[] = [...mockLeads, ...internshipLeadEntries as unknown as Lead[]];
+
 /* ═══════ LOCAL STORAGE HELPERS ═══════ */
 const STORAGE_KEYS = {
   campaigns: "crm_campaigns",
@@ -847,6 +860,13 @@ const STORAGE_KEYS = {
   followUps: "crm_follow_ups",
   admissions: "crm_admissions",
   courses: "crm_courses",
+  internshipAdmissions: "crm_internship_admissions",
+  collegeAccounts: "crm_college_accounts",
+  collegePrograms: "crm_college_programs",
+  collegeStudents: "crm_college_students",
+  schoolAccounts: "crm_school_accounts",
+  schoolPrograms: "crm_school_programs",
+  schoolStudents: "crm_school_students",
 } as const;
 
 function getOrInit<T>(key: string, defaults: T[]): T[] {
@@ -864,7 +884,7 @@ export const store = {
   getCampaigns: () => getOrInit(STORAGE_KEYS.campaigns, mockCampaigns),
   saveCampaigns: (d: Campaign[]) => save(STORAGE_KEYS.campaigns, d),
 
-  getLeads: () => getOrInit(STORAGE_KEYS.leads, mockLeads),
+  getLeads: () => getOrInit(STORAGE_KEYS.leads, allMockLeads),
   saveLeads: (d: Lead[]) => save(STORAGE_KEYS.leads, d),
 
   getCallLogs: () => getOrInit(STORAGE_KEYS.callLogs, mockCallLogs),
@@ -878,6 +898,28 @@ export const store = {
 
   getCourses: () => getOrInit(STORAGE_KEYS.courses, mockCourses),
   saveCourses: (d: Course[]) => save(STORAGE_KEYS.courses, d),
+
+  // ── Multi-Vertical Stores ──
+  getInternshipAdmissions: () => getOrInit(STORAGE_KEYS.internshipAdmissions, mockInternshipAdmissions),
+  saveInternshipAdmissions: (d: InternshipAdmission[]) => save(STORAGE_KEYS.internshipAdmissions, d),
+
+  getCollegeAccounts: () => getOrInit(STORAGE_KEYS.collegeAccounts, mockCollegeAccounts),
+  saveCollegeAccounts: (d: CollegeAccount[]) => save(STORAGE_KEYS.collegeAccounts, d),
+
+  getCollegePrograms: () => getOrInit(STORAGE_KEYS.collegePrograms, mockCollegePrograms),
+  saveCollegePrograms: (d: CollegeProgram[]) => save(STORAGE_KEYS.collegePrograms, d),
+
+  getCollegeStudents: () => getOrInit(STORAGE_KEYS.collegeStudents, mockCollegeStudents),
+  saveCollegeStudents: (d: CollegeStudent[]) => save(STORAGE_KEYS.collegeStudents, d),
+
+  getSchoolAccounts: () => getOrInit(STORAGE_KEYS.schoolAccounts, mockSchoolAccounts),
+  saveSchoolAccounts: (d: SchoolAccount[]) => save(STORAGE_KEYS.schoolAccounts, d),
+
+  getSchoolPrograms: () => getOrInit(STORAGE_KEYS.schoolPrograms, mockSchoolPrograms),
+  saveSchoolPrograms: (d: SchoolProgram[]) => save(STORAGE_KEYS.schoolPrograms, d),
+
+  getSchoolStudents: () => getOrInit(STORAGE_KEYS.schoolStudents, mockSchoolStudents),
+  saveSchoolStudents: (d: SchoolStudent[]) => save(STORAGE_KEYS.schoolStudents, d),
 
   getUsers: () => mockUsers,
 

@@ -161,6 +161,15 @@ export interface Lead {
   interestedCourse: string;
   assignedTelecallerId: string;
   status: LeadStatus;
+  // Program Channel (multi-vertical)
+  programChannel?: "Individual Course Admission" | "Internship Program" | "College Collaboration Program" | "School Training Program";
+  // Internship-specific fields
+  internshipCourse?: string;
+  internshipDuration?: string;
+  internshipLocation?: string;
+  internshipFee?: number;
+  internshipEnrollmentType?: string;
+  internshipPipelineStage?: string;
   createdAt: string;
   // Attribution
   adSetName?: string;
