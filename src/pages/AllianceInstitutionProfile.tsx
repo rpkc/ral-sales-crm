@@ -22,6 +22,10 @@ const userLabel = (id: string) => allianceUsers.find((u) => u.id === id)?.name ?
 
 export default function AllianceInstitutionProfile() {
   const { id } = useParams<{ id: string }>();
+  const { currentUser } = useAuth();
+  const isAllianceRole = currentUser?.role === "alliance_manager" || currentUser?.role === "alliance_executive";
+  const backTo = isAllianceRole ? "/alliances" : "/institutional";
+  const backLabel = isAllianceRole ? "Back to Industry Alliances" : "Back to Institutional Sales";
   const [version, setVersion] = useState(0);
   const bump = () => setVersion((v) => v + 1);
 
