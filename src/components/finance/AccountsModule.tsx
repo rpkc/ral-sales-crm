@@ -98,7 +98,7 @@ export function AccountsModule() {
   const tabs = ALL_TABS.filter(t => t.roles.includes(role));
   const [tab, setTab] = useState(tabs[0].id);
 
-  useEffect(() => { recomputeOverdue(); }, []);
+  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); }, []);
 
   return (
     <div className="space-y-6">
@@ -125,6 +125,7 @@ export function AccountsModule() {
 
         <TabsContent value="dashboard" className="mt-4"><DashboardTab onJump={setTab} /></TabsContent>
         <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
+        <TabsContent value="projections" className="mt-4"><ProjectionsTab /></TabsContent>
         <TabsContent value="billing" className="mt-4"><BillingTab role={role} /></TabsContent>
         <TabsContent value="collections" className="mt-4"><CollectionsTab role={role} /></TabsContent>
         <TabsContent value="emi" className="mt-4"><EmiTab /></TabsContent>
