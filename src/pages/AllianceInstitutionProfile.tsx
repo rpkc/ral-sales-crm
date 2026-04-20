@@ -35,35 +35,13 @@ export default function AllianceInstitutionProfile() {
   const tasks = useMemo(() => allianceStore.getTasks().filter((t) => t.institutionId === id), [id, version]);
   const events = useMemo(() => allianceStore.getEvents().filter((e) => e.institutionId === id), [id, version]);
 
-  if (!inst) {
-    return (
-      <div className="space-y-4">
-        <Link to="/institutional" className="inline-flex items-center gap-1 text-sm text-primary hover:underline"><ArrowLeft className="h-4 w-4" />Back</Link>
-        <div className="rounded-xl bg-card p-12 shadow-card text-center">
-          <p className="text-sm text-muted-foreground">Institution not found.</p>
-        </div>
-      </div>
-    );
-  }
-
   const totalRevenue = proposals.filter((p) => p.status === "Approved").reduce((s, p) => s + p.amount, 0);
   const lastVisit = visits[0];
   const daysSinceVisit = lastVisit ? daysBetween(todayIso(), lastVisit.visitDate) : null;
 
-  const updateStage = (newStage: AlliancePipelineStage) => {
-    const all = allianceStore.getInstitutions();
-    allianceStore.saveInstitutions(all.map((i) => i.id === inst.id ? { ...i, pipelineStage: newStage } : i));
-    if (newStage === "MoU Signed") {
-      confetti();
-      toast.success("🎉 MoU signed! Great win.");
-    } else {
-      toast.success(`Moved to ${newStage}.`);
-    }
-    bump();
-  };
-
-  // Best next step nudge
+  // Best next step nudge (always called — guards against missing inst)
   const nextStep = useMemo(() => {
+    if (!inst) return "";
     if (inst.pipelineStage === "Identified") return "Schedule first contact call.";
     if (inst.pipelineStage === "Contacted") return "Book an in-person meeting.";
     if (inst.pipelineStage === "Meeting Scheduled") return "Confirm attendees and prepare collateral.";
@@ -82,6 +60,29 @@ export default function AllianceInstitutionProfile() {
     events.forEach((e) => items.push({ id: `e-${e.id}`, title: e.eventName, description: `${e.attendees} attendees · ${e.leadsGenerated} leads`, timestamp: e.eventDate, badge: e.eventType }));
     return items.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   }, [visits, proposals, tasks, events]);
+
+  if (!inst) {
+    return (
+      <div className="space-y-4">
+        <Link to="/institutional" className="inline-flex items-center gap-1 text-sm text-primary hover:underline"><ArrowLeft className="h-4 w-4" />Back</Link>
+        <div className="rounded-xl bg-card p-12 shadow-card text-center">
+          <p className="text-sm text-muted-foreground">Institution not found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const updateStage = (newStage: AlliancePipelineStage) => {
+    const all = allianceStore.getInstitutions();
+    allianceStore.saveInstitutions(all.map((i) => i.id === inst.id ? { ...i, pipelineStage: newStage } : i));
+    if (newStage === "MoU Signed") {
+      confetti();
+      toast.success("🎉 MoU signed! Great win.");
+    } else {
+      toast.success(`Moved to ${newStage}.`);
+    }
+    bump();
+  };
 
   return (
     <div className="space-y-5">
