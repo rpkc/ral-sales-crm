@@ -25,9 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatCard } from "@/components/StatCard";
 import { DataTable, FormEngine, StatusPill, ActivityTimeline } from "@/components/alliance/AllianceUI";
 import type { ColumnDef, FieldConfig, ActivityItem } from "@/components/alliance/AllianceUI";
+import { ApprovalCenter } from "@/components/alliance/ApprovalCenter";
+import { approvalStore } from "@/lib/approvals";
 import {
   Building2, Users, Calendar, ListChecks, FileText, PartyPopper, Receipt,
-  BarChart3, Plus, AlertTriangle, Download, TrendingUp, MapPin,
+  BarChart3, Plus, AlertTriangle, Download, TrendingUp, MapPin, ShieldCheck,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -80,7 +82,7 @@ interface AllianceModuleProps {
 
 export function AllianceModule({ scope, executiveId, initialTab, initialAction, initialStageFilter, initialDistrictFilter }: AllianceModuleProps) {
   const { currentUser } = useAuth();
-  const validTabs = ["institutions", "contacts", "visits", "tasks", "proposals", "events", "expenses", "reports"];
+  const validTabs = ["institutions", "contacts", "visits", "tasks", "proposals", "events", "expenses", "approvals", "reports"];
   const [tab, setTab] = useState(validTabs.includes(initialTab ?? "") ? (initialTab as string) : "institutions");
   const [stageFilter, setStageFilter] = useState<string>(initialStageFilter ?? "all");
   const [districtFilter, setDistrictFilter] = useState<string>(initialDistrictFilter ?? "all");
