@@ -30,6 +30,10 @@ import {
 import { FinanceKpi, fmtINR, fmtDate, StatusPill, statusTone } from "./FinanceKpi";
 import { FinanceTable, Column } from "./FinanceTable";
 import { FinanceDrawer } from "./FinanceDrawer";
+import { buildVouchers, vouchersToCsv, vouchersToJson, downloadFile, type TxnType, type DateRange } from "@/lib/tally-export";
+import { submitExpenseForApproval, approvalForExpense, syncApprovalToExpense, tierForAmount } from "@/lib/expense-approval-bridge";
+import { approvalStore } from "@/lib/approvals";
+import type { UserRole } from "@/lib/types";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
@@ -343,17 +347,18 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   });
 
   const submit = () => {
-    if (!f.customerName || f.subtotal <= 0) { toast({ title: "Fill customer + amount", variant: "destructive" }); return; }
-    createInvoice({
+    if (!f.customerName.trim()) { toast({ title: "Student record not found.", description: "Party (student / institution) name is required.", variant: "destructive" }); return; }
+    if (f.subtotal <= 0) { toast({ title: "Invoice total cannot be zero.", description: "Enter a subtotal greater than ₹0.", variant: "destructive" }); return; }
+    const inv = createInvoice({
       customerId: "c_" + Math.random().toString(36).slice(2, 6),
-      customerName: f.customerName, customerType: f.customerType,
+      customerName: f.customerName.trim(), customerType: f.customerType,
       revenueStream: f.revenueStream, programName: f.programName,
       issueDate: new Date(f.issueDate).toISOString(),
       dueDate: new Date(f.dueDate).toISOString(),
       subtotal: f.subtotal, discount: f.discount,
       gstType: f.gstType, gstRate: f.gstRate, gstin: f.gstin, notes: f.notes,
     } as any, currentUser?.id || "u0");
-    toast({ title: "Invoice created" });
+    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — KPIs updated.` });
     onClose();
   };
 
@@ -536,18 +541,41 @@ function ExpensesTab({ role }: { role: RoleScope }) {
 
   const canApprove = role === "owner" || role === "manager";
 
+  const actOnApproval = (exp: Expense, action: "Approve" | "Reject") => {
+    const req = approvalForExpense(exp.id);
+    const actorRole: UserRole = (currentUser?.role as UserRole) || "accounts_manager";
+    if (req) {
+      const updated = approvalStore.act(req.id, {
+        action,
+        actorId: currentUser?.id || "u0",
+        actorRole,
+        comment: action === "Reject" ? "Rejected via Expenses tab" : undefined,
+      });
+      if (!updated) { toast({ title: "Approval level not configured.", variant: "destructive" }); return; }
+      syncApprovalToExpense(updated, currentUser?.id || "u0");
+    } else {
+      // fallback (legacy expenses without an approval record)
+      setExpenseStatus(exp.id, action === "Approve" ? "Approved" : "Rejected", currentUser?.id || "u0");
+    }
+    toast({ title: action === "Approve" ? "Expense approved" : "Expense rejected" });
+  };
+
   const cols: Column<Expense>[] = [
     { key: "no", header: "Expense #", render: r => <span className="font-mono text-xs">{r.expenseNo}</span>, sortValue: r => r.expenseNo, exportValue: r => r.expenseNo },
     { key: "cat", header: "Category", render: r => <Badge variant="outline" className="text-[10px]">{r.category}</Badge>, exportValue: r => r.category },
     { key: "vendor", header: "Vendor", render: r => r.vendorName || "—", exportValue: r => r.vendorName || "" },
     { key: "amt", header: "Amount", render: r => <span className="font-semibold tabular-nums">{fmtINR(r.total)}</span>, sortValue: r => r.total, exportValue: r => r.total },
     { key: "date", header: "Date", render: r => fmtDate(r.spendDate), sortValue: r => r.spendDate, exportValue: r => fmtDate(r.spendDate) },
+    { key: "tier", header: "Approver", render: r => {
+      try { return <Badge variant="outline" className="text-[10px]">{tierForAmount(r.total).tier.replace(/_/g, " ")}</Badge>; }
+      catch { return <span className="text-xs text-muted-foreground">—</span>; }
+    }, exportValue: r => { try { return tierForAmount(r.total).tier; } catch { return ""; } } },
     { key: "status", header: "Status", render: r => <StatusPill status={r.status} tone={statusTone(r.status)} />, exportValue: r => r.status },
     {
       key: "actions", header: "", render: r => canApprove && r.status === "Pending"
         ? <div className="flex gap-1">
-            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setExpenseStatus(r.id, "Approved", currentUser?.id || "u0"); toast({ title: "Approved" }); }}>Approve</Button>
-            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setExpenseStatus(r.id, "Rejected", currentUser?.id || "u0"); toast({ title: "Rejected" }); }}>Reject</Button>
+            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); actOnApproval(r, "Approve"); }}>Approve</Button>
+            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); actOnApproval(r, "Reject"); }}>Reject</Button>
           </div>
         : null
     },
@@ -583,7 +611,7 @@ function ExpenseFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   const submit = () => {
     if (f.amount <= 0 || !f.description) { toast({ title: "Fill amount + description", variant: "destructive" }); return; }
     const vendor = fin.vendors.find(v => v.id === f.vendorId);
-    createExpense({
+    const exp = createExpense({
       category: f.category,
       vendorId: vendor?.id, vendorName: vendor?.name,
       amount: f.amount, gst: f.gst,
@@ -593,7 +621,14 @@ function ExpenseFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
       paymentMode: f.paymentMode,
       submittedBy: currentUser?.id || "u0",
     } as any, currentUser?.id || "u0");
-    toast({ title: "Expense submitted for approval" });
+    try {
+      const role = (currentUser?.role as UserRole) || "accounts_executive";
+      const tier = tierForAmount(exp.total);
+      submitExpenseForApproval(exp, currentUser?.id || "u0", role);
+      toast({ title: "Expense submitted", description: `Routed to ${tier.tier.replace(/_/g, " ")} (${tier.approverRole.replace(/_/g, " ")}).` });
+    } catch {
+      toast({ title: "Approval level not configured.", variant: "destructive" });
+    }
     onClose();
   };
 
@@ -972,45 +1007,135 @@ function GstTab() {
 function ExportsTab() {
   const fin = useFinance();
   const { toast } = useToast();
+  const [txnType, setTxnType] = useState<TxnType>("all_transactions");
+  const [range, setRange] = useState<DateRange>("this_month");
+  const [from, setFrom] = useState(new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
+  const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
 
-  const downloadJson = (name: string, data: any) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${name}.json`; a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: `${name} exported` });
+  const preview = useMemo(() => buildVouchers(txnType, range, from, to), [txnType, range, from, to, fin]);
+
+  const stamp = () => `${txnType}_${range}_${new Date().toISOString().slice(0, 10)}`;
+
+  const onExport = (format: "csv" | "json") => {
+    try {
+      if (!preview.length) { toast({ title: "No records found for selected filters." }); return; }
+      if (format === "csv") {
+        downloadFile(`tally_${stamp()}.csv`, vouchersToCsv(preview), "text/csv");
+      } else {
+        downloadFile(`tally_${stamp()}.json`, JSON.stringify(vouchersToJson(preview), null, 2), "application/json");
+      }
+      toast({ title: "Export generated successfully.", description: `${preview.length} voucher${preview.length > 1 ? "s" : ""} → ${format.toUpperCase()}` });
+    } catch {
+      toast({ title: "Export failed. Please retry.", variant: "destructive" });
+    }
   };
 
-  const tally = (kind: "sales" | "receipt" | "payment") => {
-    if (kind === "sales") return fin.invoices.map(i => ({ Voucher: "Sales", Date: i.issueDate.slice(0, 10), Party: i.customerName, Amount: i.total, CGST: i.cgst, SGST: i.sgst, Ref: i.invoiceNo }));
-    if (kind === "receipt") return fin.payments.map(p => ({ Voucher: "Receipt", Date: p.paidOn.slice(0, 10), Party: p.customerName, Mode: p.mode, Amount: p.amount, Ref: p.receiptNo }));
-    return fin.expenses.filter(e => e.status === "Approved").map(e => ({ Voucher: "Payment", Date: e.spendDate.slice(0, 10), Ledger: e.category, Vendor: e.vendorName || "", Amount: e.total, Ref: e.expenseNo }));
-  };
-
-  const items = [
-    { name: "Sales Voucher (Tally)", icon: <FileText className="h-4 w-4" />, action: () => downloadJson("tally-sales-voucher", tally("sales")) },
-    { name: "Receipt Voucher (Tally)", icon: <Receipt className="h-4 w-4" />, action: () => downloadJson("tally-receipt-voucher", tally("receipt")) },
-    { name: "Payment Voucher (Tally)", icon: <IndianRupee className="h-4 w-4" />, action: () => downloadJson("tally-payment-voucher", tally("payment")) },
-    { name: "P&L Summary", icon: <TrendingUp className="h-4 w-4" />, action: () => downloadJson("pnl-summary", { revenue: fin.payments.reduce((s, p) => s + p.amount, 0), expense: fin.expenses.filter(e => e.status === "Approved").reduce((s, e) => s + e.total, 0) }) },
-    { name: "Receivables Aging", icon: <AlertTriangle className="h-4 w-4" />, action: () => downloadJson("receivables-aging", fin.invoices.filter(i => i.amountPaid < i.total)) },
-    { name: "Cash Flow Statement", icon: <FilePieChart className="h-4 w-4" />, action: () => downloadJson("cashflow", fin.cashflow) },
+  const TXN_OPTIONS: { value: TxnType; label: string }[] = [
+    { value: "all_transactions", label: "All Transactions" },
+    { value: "sales_invoices", label: "Sales Invoices" },
+    { value: "receipts", label: "Receipts" },
+    { value: "expense_vouchers", label: "Expense Vouchers" },
+    { value: "payment_vouchers", label: "Payment Vouchers" },
+    { value: "journal_entries", label: "Journal Entries" },
+    { value: "student_fee_collections", label: "Student Fee Collections" },
+    { value: "vendor_payments", label: "Vendor Payments" },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {items.map(it => (
-        <Card key={it.name} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={it.action}>
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">{it.icon}</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{it.name}</p>
-              <p className="text-xs text-muted-foreground">Click to download</p>
-            </div>
-            <FileDown className="h-4 w-4 text-muted-foreground" />
+    <div className="space-y-4">
+      <Card className="p-4 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2"><FileDown className="h-4 w-4 text-primary" /> Tally-Ready Voucher Export</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Filter by transaction type and date range, then download as CSV or JSON.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <Label className="text-xs">Transaction Type</Label>
+            <Select value={txnType} onValueChange={(v: TxnType) => setTxnType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TXN_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Date Range</Label>
+            <Select value={range} onValueChange={(v: DateRange) => setRange(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="this_week">This Week</SelectItem>
+                <SelectItem value="this_month">This Month</SelectItem>
+                <SelectItem value="custom_range">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {range === "custom_range" && (
+            <>
+              <div>
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={from} onChange={e => setFrom(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={to} onChange={e => setTo(e.target.value)} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+          <div className="text-xs text-muted-foreground">
+            <b className="text-foreground tabular-nums">{preview.length}</b> voucher{preview.length === 1 ? "" : "s"} match
+          </div>
+          <div className="flex-1" />
+          <Button id="export_csv" size="sm" variant="outline" onClick={() => onExport("csv")} className="gap-1.5">
+            <FileDown className="h-3.5 w-3.5" /> Export CSV
+          </Button>
+          <Button id="export_json" size="sm" onClick={() => onExport("json")} className="gap-1.5">
+            <FileDown className="h-3.5 w-3.5" /> Export JSON
+          </Button>
+        </div>
+      </Card>
+
+      {preview.length === 0 ? (
+        <Card className="p-8 text-center text-sm text-muted-foreground">
+          No records found for selected filters.
+        </Card>
+      ) : (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-4 py-2 border-b bg-muted/40 text-xs font-medium">Preview · first 25 rows</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/30 text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left">Date</th>
+                  <th className="px-3 py-2 text-left">Type</th>
+                  <th className="px-3 py-2 text-left">Voucher #</th>
+                  <th className="px-3 py-2 text-left">Ledger</th>
+                  <th className="px-3 py-2 text-left">Party</th>
+                  <th className="px-3 py-2 text-right">Debit</th>
+                  <th className="px-3 py-2 text-right">Credit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, 25).map((v, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="px-3 py-2">{v.voucher_date}</td>
+                    <td className="px-3 py-2"><Badge variant="outline" className="text-[10px]">{v.voucher_type}</Badge></td>
+                    <td className="px-3 py-2 font-mono">{v.voucher_number}</td>
+                    <td className="px-3 py-2">{v.ledger_name}</td>
+                    <td className="px-3 py-2">{v.party_name}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{v.debit_amount ? fmtINR(v.debit_amount) : "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{v.credit_amount ? fmtINR(v.credit_amount) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
-      ))}
+      )}
     </div>
   );
 }
