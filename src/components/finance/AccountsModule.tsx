@@ -414,10 +414,20 @@ function BillingTab({ role }: { role: RoleScope }) {
         onRowClick={(r) => setView(r)}
         exportName="invoices"
         toolbar={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {canBulkSend && (
               <Button size="sm" variant="outline" onClick={bulkSendOverdue} className="gap-1.5">
                 <Mail className="h-3.5 w-3.5" /> Bulk: Overdue Reminders
+              </Button>
+            )}
+            {canGenerate && (
+              <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)} className="gap-1.5">
+                <Layers className="h-3.5 w-3.5" /> Bulk Generate
+              </Button>
+            )}
+            {canGenerate && (
+              <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Quick Invoice
               </Button>
             )}
             <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Create Invoice</Button>
@@ -425,6 +435,8 @@ function BillingTab({ role }: { role: RoleScope }) {
         }
       />
       <InvoiceFormDrawer open={open} onClose={() => setOpen(false)} />
+      <QuickInvoiceDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
+      <BulkInvoiceDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
       <InvoiceViewDrawer invoice={view} onClose={() => setView(null)} />
       <InvoiceDispatchDialog invoice={dispatchInv} open={!!dispatchInv} onClose={() => setDispatchInv(null)} />
     </div>
