@@ -123,11 +123,11 @@ export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = 
   ],
   alliance_manager: [
     { to: "/", label: "Dashboard" },
-    { to: "/institutional", label: "Industry Alliances" },
+    { to: "/alliances", label: "Industry Alliances" },
   ],
   alliance_executive: [
     { to: "/", label: "Dashboard" },
-    { to: "/institutional", label: "My Alliances" },
+    { to: "/alliances", label: "My Alliances" },
   ],
 };
 
