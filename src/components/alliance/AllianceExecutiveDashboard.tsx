@@ -15,6 +15,7 @@ import {
 } from "./AllianceShell";
 import { allianceStore } from "@/lib/alliance-data";
 import { ActivityTimeline } from "./AllianceUI";
+import { PendingApprovalsWidget } from "./ApprovalCenter";
 import type { ActivityItem } from "./AllianceUI";
 
 export function AllianceExecutiveDashboard() {
