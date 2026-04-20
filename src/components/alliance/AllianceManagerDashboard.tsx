@@ -264,6 +264,7 @@ export function AllianceManagerDashboard() {
             </div>
           }
         />
+        <PendingApprovalsWidget onOpen={() => navigate("/alliances?tab=approvals")} />
       </div>
 
       {/* Smart nudges */}

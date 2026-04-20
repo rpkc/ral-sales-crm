@@ -150,6 +150,7 @@ export function AllianceExecutiveDashboard() {
           title="Expense Pending" value={expensesPending} icon={<Receipt className="h-5 w-5" />}
           microcopy="Claims awaiting approval."
         />
+        <PendingApprovalsWidget onOpen={() => { window.location.href = "/alliances?tab=approvals"; }} />
       </div>
 
       <NudgeBanner items={nudges} />
