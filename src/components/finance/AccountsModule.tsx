@@ -315,11 +315,11 @@ function BillingTab({ role }: { role: RoleScope }) {
 
   return (
     <div className="space-y-3">
-      <FinanceTable
+      <FinanceTable<Invoice>
         rows={fin.invoices}
         columns={cols}
         searchKeys={["invoiceNo", "customerName", "revenueStream"]}
-        onRowClick={setView}
+        onRowClick={(r) => setView(r)}
         exportName="invoices"
         toolbar={<Button size="sm" onClick={() => setOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Create Invoice</Button>}
       />
