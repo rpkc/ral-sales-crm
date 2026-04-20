@@ -452,31 +452,43 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     programName: "",
     issueDate: new Date().toISOString().slice(0, 10),
     dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
-    subtotal: 0, discount: 0, gstType: "Taxable" as GstType, gstRate: 18,
+    amount: 0, discount: 0, gstType: "Taxable" as GstType, gstRate: 18,
     gstin: "", notes: "",
+    mode: "gross_inclusive" as GstInputMode,
+    intra: true, intraOverridden: false,
   });
+
+  useEffect(() => {
+    if (!f.intraOverridden) {
+      const auto = detectIntraState(f.gstin);
+      if (auto !== f.intra) setF(s => ({ ...s, intra: auto }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.gstin]);
+
+  const effectiveRate = f.gstType === "Exempt" ? 0 : f.gstRate;
+  const breakup = computeBreakup(Math.max(0, f.amount - f.discount), effectiveRate, f.mode, f.intra);
 
   const submit = () => {
     if (!f.customerName.trim()) { toast({ title: "Student record not found.", description: "Party (student / institution) name is required.", variant: "destructive" }); return; }
-    if (f.subtotal <= 0) { toast({ title: "Invoice total cannot be zero.", description: "Enter a subtotal greater than ₹0.", variant: "destructive" }); return; }
+    const v = validateGstInput(f.amount, effectiveRate);
+    if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
     const inv = createInvoice({
       customerId: "c_" + Math.random().toString(36).slice(2, 6),
       customerName: f.customerName.trim(), customerType: f.customerType,
       revenueStream: f.revenueStream, programName: f.programName,
       issueDate: new Date(f.issueDate).toISOString(),
       dueDate: new Date(f.dueDate).toISOString(),
-      subtotal: f.subtotal, discount: f.discount,
-      gstType: f.gstType, gstRate: f.gstRate, gstin: f.gstin, notes: f.notes,
+      subtotal: breakup.taxable, discount: 0,
+      gstType: f.gstType, gstRate: effectiveRate, gstin: f.gstin, notes: f.notes,
     } as any, currentUser?.id || "u0");
-    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — KPIs updated.` });
+    inv.cgst = breakup.cgst; inv.sgst = breakup.sgst; inv.igst = breakup.igst;
+    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — Taxable ${fmtINR(breakup.taxable)} + GST ${fmtINR(breakup.gstAmount)}` });
     onClose();
   };
 
-  const taxable = f.subtotal - f.discount;
-  const gst = f.gstType === "Exempt" ? 0 : taxable * f.gstRate / 100;
-
   return (
-    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Invoice" description="GST-ready invoice with auto-numbering">
+    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Invoice" description="Enter gross fee — taxable & GST split automatically.">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Customer Name</Label><Input value={f.customerName} onChange={e => setF({ ...f, customerName: e.target.value })} /></div>
@@ -499,8 +511,6 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="col-span-2"><Label>Program / Item</Label><Input value={f.programName} onChange={e => setF({ ...f, programName: e.target.value })} /></div>
           <div><Label>Issue Date</Label><Input type="date" value={f.issueDate} onChange={e => setF({ ...f, issueDate: e.target.value })} /></div>
           <div><Label>Due Date</Label><Input type="date" value={f.dueDate} onChange={e => setF({ ...f, dueDate: e.target.value })} /></div>
-          <div><Label>Subtotal (₹)</Label><Input type="number" value={f.subtotal || ""} onChange={e => setF({ ...f, subtotal: +e.target.value })} /></div>
-          <div><Label>Discount (₹)</Label><Input type="number" value={f.discount || ""} onChange={e => setF({ ...f, discount: +e.target.value })} /></div>
           <div><Label>GST Type</Label>
             <Select value={f.gstType} onValueChange={(v: any) => setF({ ...f, gstType: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -509,15 +519,26 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               </SelectContent>
             </Select>
           </div>
-          <div><Label>GST Rate %</Label><Input type="number" value={f.gstRate} onChange={e => setF({ ...f, gstRate: +e.target.value })} /></div>
-          <div className="col-span-2"><Label>GSTIN (optional)</Label><Input value={f.gstin} onChange={e => setF({ ...f, gstin: e.target.value })} /></div>
-          <div className="col-span-2"><Label>Notes</Label><Textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+          <div><Label>Discount (₹)</Label><Input type="number" min={0} value={f.discount || ""} onChange={e => setF({ ...f, discount: +e.target.value })} /></div>
+          <div className="col-span-2"><Label>GSTIN (optional)</Label><Input value={f.gstin} onChange={e => setF({ ...f, gstin: e.target.value })} placeholder="27AABCS1234F1Z9" /></div>
         </div>
-        <Card className="p-3 bg-muted/30 text-xs space-y-1">
-          <div className="flex justify-between"><span>Taxable</span><span>{fmtINR(taxable)}</span></div>
-          <div className="flex justify-between"><span>GST</span><span>{fmtINR(gst)}</span></div>
-          <div className="flex justify-between font-semibold text-sm pt-1 border-t"><span>Total</span><span>{fmtINR(taxable + gst)}</span></div>
-        </Card>
+
+        <GstAmountInput
+          amount={f.amount}
+          rate={effectiveRate}
+          mode={f.mode}
+          intraState={f.intra}
+          intraOverridden={f.intraOverridden}
+          gstin={f.gstin}
+          canEditRate={f.gstType === "Taxable"}
+          onAmountChange={(n) => setF({ ...f, amount: n })}
+          onRateChange={(n) => setF({ ...f, gstRate: n })}
+          onModeChange={(m) => setF({ ...f, mode: m })}
+          onIntraStateChange={(intra, manual) => setF({ ...f, intra, intraOverridden: manual ? true : f.intraOverridden })}
+        />
+
+        <div><Label>Notes</Label><Textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+        <p className="text-[11px] text-muted-foreground">Taxable fee and GST are calculated automatically based on the selected mode.</p>
         <Button className="w-full" onClick={submit}>Create Invoice</Button>
       </div>
     </FinanceDrawer>
