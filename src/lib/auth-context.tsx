@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { User, UserRole } from "./types";
+import { User } from "./types";
+export { roleNavConfig, roleLabels } from "./role-config";
 
 const allUsers: User[] = [
   { id: "u1", name: "Amit Sharma", email: "amit@redapple.com", password: "admin123", role: "admin" },
