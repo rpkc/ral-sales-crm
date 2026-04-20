@@ -328,6 +328,8 @@ function BillingTab({ role }: { role: RoleScope }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [view, setView] = useState<Invoice | null>(null);
   const [dispatchInv, setDispatchInv] = useState<Invoice | null>(null);
 
