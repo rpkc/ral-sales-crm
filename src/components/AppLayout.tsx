@@ -16,6 +16,7 @@ const iconMap: Record<string, typeof LayoutDashboard> = {
   "/counseling": HeartHandshake,
   "/revenue": TrendingUp,
   "/institutional": Building2,
+  "/alliances": HeartHandshake,
   "/follow-ups": CalendarClock,
   "/admissions": GraduationCap,
 };
