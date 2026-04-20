@@ -25,9 +25,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatCard } from "@/components/StatCard";
 import { DataTable, FormEngine, StatusPill, ActivityTimeline } from "@/components/alliance/AllianceUI";
 import type { ColumnDef, FieldConfig, ActivityItem } from "@/components/alliance/AllianceUI";
+import { ApprovalCenter } from "@/components/alliance/ApprovalCenter";
+import { approvalStore } from "@/lib/approvals";
 import {
   Building2, Users, Calendar, ListChecks, FileText, PartyPopper, Receipt,
-  BarChart3, Plus, AlertTriangle, Download, TrendingUp, MapPin,
+  BarChart3, Plus, AlertTriangle, Download, TrendingUp, MapPin, ShieldCheck,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -80,7 +82,7 @@ interface AllianceModuleProps {
 
 export function AllianceModule({ scope, executiveId, initialTab, initialAction, initialStageFilter, initialDistrictFilter }: AllianceModuleProps) {
   const { currentUser } = useAuth();
-  const validTabs = ["institutions", "contacts", "visits", "tasks", "proposals", "events", "expenses", "reports"];
+  const validTabs = ["institutions", "contacts", "visits", "tasks", "proposals", "events", "expenses", "approvals", "reports"];
   const [tab, setTab] = useState(validTabs.includes(initialTab ?? "") ? (initialTab as string) : "institutions");
   const [stageFilter, setStageFilter] = useState<string>(initialStageFilter ?? "all");
   const [districtFilter, setDistrictFilter] = useState<string>(initialDistrictFilter ?? "all");
@@ -351,19 +353,36 @@ export function AllianceModule({ scope, executiveId, initialTab, initialAction, 
   const saveExpense = (vals: Record<string, unknown>) => {
     const all = allianceStore.getExpenses();
     const inst = data.institutions.find((i) => i.name === vals.institution);
+    const amount = Number(vals.amount) || 0;
+    const expenseType = vals.expenseType as AllianceExpense["expenseType"];
+    const execId = scope === "executive" && executiveId ? executiveId : userIdByLabel(String(vals.executive)) || "ae1";
     const newEx: AllianceExpense = {
       id: `ex${Date.now()}`,
-      executiveId: scope === "executive" && executiveId ? executiveId : userIdByLabel(String(vals.executive)) || "ae1",
+      executiveId: execId,
       institutionId: inst?.id ?? "",
-      expenseType: vals.expenseType as AllianceExpense["expenseType"],
-      amount: Number(vals.amount) || 0,
+      expenseType,
+      amount,
       billUrl: "",
       expenseDate: String(vals.expenseDate),
       status: "Submitted",
       notes: String(vals.notes || ""),
     };
     allianceStore.saveExpenses([newEx, ...all]);
-    toast.success("Expense submitted.");
+    // Auto-create approval routed to manager
+    if (currentUser) {
+      const requestType = expenseType === "Travel" ? "Travel Reimbursement" : "Expense Bill";
+      approvalStore.submit({
+        requestId: newEx.id,
+        requestType,
+        title: `${expenseType} ₹${amount.toLocaleString()} — ${userLabelById(execId)}`,
+        submittedBy: currentUser.id,
+        submittedRole: currentUser.role,
+        amount,
+        priority: amount > 2000 ? "High" : "Medium",
+        notes: newEx.notes || `${expenseType} expense for ${inst?.name ?? "—"}`,
+      });
+    }
+    toast.success("Expense submitted for approval.");
     setShowExpenseForm(false);
     bump();
   };
@@ -562,6 +581,7 @@ export function AllianceModule({ scope, executiveId, initialTab, initialAction, 
           <TabsTrigger value="proposals" className="text-[11px] sm:text-xs"><FileText className="mr-1 h-3.5 w-3.5" />Proposals</TabsTrigger>
           <TabsTrigger value="events" className="text-[11px] sm:text-xs"><PartyPopper className="mr-1 h-3.5 w-3.5" />Events</TabsTrigger>
           <TabsTrigger value="expenses" className="text-[11px] sm:text-xs"><Receipt className="mr-1 h-3.5 w-3.5" />Expenses</TabsTrigger>
+          <TabsTrigger value="approvals" className="text-[11px] sm:text-xs"><ShieldCheck className="mr-1 h-3.5 w-3.5" />Approvals</TabsTrigger>
           <TabsTrigger value="reports" className="text-[11px] sm:text-xs"><BarChart3 className="mr-1 h-3.5 w-3.5" />Reports</TabsTrigger>
         </TabsList>
 
@@ -670,6 +690,11 @@ export function AllianceModule({ scope, executiveId, initialTab, initialAction, 
             searchPlaceholder="Search expenses…"
             toolbar={<Button size="sm" onClick={() => setShowExpenseForm(true)}><Plus className="mr-1 h-4 w-4" /> Submit Expense</Button>}
           />
+        </TabsContent>
+
+        {/* ── Approvals ── */}
+        <TabsContent value="approvals" className="mt-4">
+          <ApprovalCenter />
         </TabsContent>
 
         {/* ── Reports / Insights ── */}

@@ -15,6 +15,7 @@ import CounselingPage from "@/pages/CounselingPage";
 import InstitutionalSalesPage from "@/pages/InstitutionalSalesPage";
 import AllianceInstitutionProfile from "@/pages/AllianceInstitutionProfile";
 import AlliancesPage from "@/pages/AlliancesPage";
+import ApprovalsPage from "@/pages/ApprovalsPage";
 import RevenueAnalyticsPage from "@/pages/RevenueAnalyticsPage";
 import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/NotFound";
@@ -42,6 +43,7 @@ function AppRoutes() {
         <Route path="/institutional/profile/:id" element={<AllianceInstitutionProfile />} />
         <Route path="/alliances" element={<AlliancesPage />} />
         <Route path="/alliances/profile/:id" element={<AllianceInstitutionProfile />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
         <Route path="/admissions" element={<AdmissionsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

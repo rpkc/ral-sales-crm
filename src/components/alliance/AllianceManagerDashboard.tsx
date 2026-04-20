@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PendingApprovalsWidget } from "./ApprovalCenter";
 import {
   KpiCard, NudgeBanner, GlobalFilterBar, useAllianceData, defaultFilters, todayIso, daysBetween, ProgressRing,
 } from "./AllianceShell";
@@ -263,6 +264,7 @@ export function AllianceManagerDashboard() {
             </div>
           }
         />
+        <PendingApprovalsWidget onOpen={() => navigate("/alliances?tab=approvals")} />
       </div>
 
       {/* Smart nudges */}
