@@ -15,6 +15,7 @@ import { KpiCard, todayIso, daysBetween, confetti } from "@/components/alliance/
 import { PIPELINE_STAGES } from "@/lib/alliance-types";
 import type { AlliancePipelineStage } from "@/lib/alliance-types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 
 const userLabel = (id: string) => allianceUsers.find((u) => u.id === id)?.name ?? id;
