@@ -9,6 +9,11 @@ const allUsers: User[] = [
   { id: "u5", name: "Manjari Chakraborty", email: "manjari@redapple.com", password: "counselor123", role: "counselor" },
   { id: "u6", name: "Vikram Singh", email: "vikram@redapple.com", password: "manager123", role: "telecalling_manager" },
   { id: "u7", name: "Rajesh Kapoor", email: "rajesh@redapple.com", password: "owner123", role: "owner" },
+  // Industry Alliances
+  { id: "am1", name: "Rohit Banerjee", email: "rohit@redapple.com", password: "alliance123", role: "alliance_manager" },
+  { id: "ae1", name: "Sneha Roy", email: "sneha@redapple.com", password: "alliance123", role: "alliance_executive" },
+  { id: "ae2", name: "Karan Mehta", email: "karan@redapple.com", password: "alliance123", role: "alliance_executive" },
+  { id: "ae3", name: "Pooja Nair", email: "pooja@redapple.com", password: "alliance123", role: "alliance_executive" },
 ];
 
 interface AuthContextValue {
@@ -116,6 +121,14 @@ export const roleNavConfig: Record<UserRole, { to: string; label: string }[]> = 
     { to: "/follow-ups", label: "Follow-ups" },
     { to: "/admissions", label: "Admissions" },
   ],
+  alliance_manager: [
+    { to: "/", label: "Dashboard" },
+    { to: "/institutional", label: "Industry Alliances" },
+  ],
+  alliance_executive: [
+    { to: "/", label: "Dashboard" },
+    { to: "/institutional", label: "My Alliances" },
+  ],
 };
 
 export const roleLabels: Record<UserRole, string> = {
@@ -125,4 +138,6 @@ export const roleLabels: Record<UserRole, string> = {
   marketing_manager: "Marketing Manager",
   telecalling_manager: "Telecalling Manager",
   owner: "Owner / Director",
+  alliance_manager: "Alliance Manager",
+  alliance_executive: "Alliance Executive",
 };
