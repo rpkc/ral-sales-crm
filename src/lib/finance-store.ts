@@ -254,7 +254,7 @@ export function updateInvoice(
 
   Object.entries(patch).forEach(([k, v]) => {
     if (k === "intraState") return;
-    if (v !== undefined) (inv as Record<string, unknown>)[k] = v;
+    if (v !== undefined) (inv as unknown as Record<string, unknown>)[k] = v;
   });
 
   // Recompute money fields
