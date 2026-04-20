@@ -3,7 +3,7 @@
  * Drilldown KPI cards, clickable funnel, leaderboard, district heatmap, at-risk accounts.
  */
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Building2, Calendar, FileText, Handshake, TrendingUp, Clock, Trophy, AlertTriangle, MapPin, Sparkles,
 } from "lucide-react";
@@ -23,6 +23,7 @@ const execList = allianceUsers.filter((u) => u.role === "alliance_executive").ma
 const userLabel = (id: string) => allianceUsers.find((u) => u.id === id)?.name ?? id;
 
 export function AllianceManagerDashboard() {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<AllianceFilters>(defaultFilters);
   const data = useAllianceData({ scope: "manager", filters });
 
