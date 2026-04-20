@@ -140,6 +140,11 @@ export function AccountsModule() {
 /* ───────── Dashboard ───────── */
 function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
   const fin = useFinance();
+  const edits = useSyncExternalStore(subscribeInvoiceEdits, getInvoiceEdits, getInvoiceEdits);
+  const todayKey = new Date().toDateString();
+  const editsToday = edits.filter(e => new Date(e.at).toDateString() === todayKey).length;
+  const highValueChanges = edits.filter(e => e.highValue).length;
+  const revisedBilling = edits.reduce((s, e) => s + e.amountDelta, 0);
   const totalBilled = fin.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollected = fin.payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = fin.invoices.reduce((s, i) => s + (i.total - i.amountPaid), 0);
@@ -233,6 +238,9 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
         <FinanceKpi label="Top Revenue" value={topStream} hint={fmtINR(byStream[topStream] || 0)} tone="primary" onClick={() => onJump("revenue")} />
         <FinanceKpi label="Collection Eff." value={`${collectionEff.toFixed(1)}%`} tone={collectionEff > 70 ? "success" : "warning"} />
         <FinanceKpi label="Budget Variance" value={<BudgetVariance />} tone="default" onClick={() => onJump("budgets")} />
+        <FinanceKpi label="Invoice Edits Today" value={editsToday} hint={`${edits.length} all-time`} tone={editsToday > 0 ? "primary" : "default"} icon={<Pencil className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="High-Value Changes" value={highValueChanges} hint=">₹2.5L" tone={highValueChanges > 0 ? "warning" : "default"} icon={<AlertTriangle className="h-4 w-4" />} />
+        <FinanceKpi label="Revised Billing" value={fmtINR(revisedBilling)} hint="Net delta" tone={revisedBilling >= 0 ? "success" : "destructive"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
