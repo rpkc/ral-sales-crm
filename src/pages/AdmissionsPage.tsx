@@ -3,8 +3,9 @@ import { store } from "@/lib/mock-data";
 import { Admission, PaymentStatus, PaymentMode, PaymentType, PaymentHistoryEntry } from "@/lib/types";
 import {
   MASTER_PAYMENT_MODES, MASTER_COURSE_NAMES, MASTER_BATCH_TIMINGS,
-  MASTER_SCHOLARSHIP_LEVELS,
+  MASTER_SCHOLARSHIP_LEVELS, getCourseFee,
 } from "@/lib/master-schema";
+import { computeBreakup } from "@/lib/gst-calc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -401,7 +402,13 @@ export default function AdmissionsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Course</Label>
-                  <Select value={form.courseSelected} onValueChange={(v) => setForm({ ...form, courseSelected: v })}>
+                  <Select
+                    value={form.courseSelected}
+                    onValueChange={(v) => {
+                      const fee = getCourseFee(v);
+                      setForm({ ...form, courseSelected: v, totalFee: fee ? String(fee) : form.totalFee });
+                    }}
+                  >
                     <SelectTrigger><SelectValue placeholder="Select course" /></SelectTrigger>
                     <SelectContent>{MASTER_COURSE_NAMES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
@@ -416,8 +423,24 @@ export default function AdmissionsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Admission Date</Label><Input type="date" value={form.admissionDate} onChange={(e) => setForm({ ...form, admissionDate: e.target.value })} /></div>
-                <div><Label>Total Fee (₹)</Label><Input type="number" value={form.totalFee} onChange={(e) => setForm({ ...form, totalFee: e.target.value })} /></div>
+                <div>
+                  <Label>Total Fee (GST Included, ₹)</Label>
+                  <Input type="number" value={form.totalFee} onChange={(e) => setForm({ ...form, totalFee: e.target.value })} />
+                  <p className="text-[11px] text-muted-foreground mt-1">Auto-fills from selected course; edit if scholarship applies.</p>
+                </div>
               </div>
+              {parseFloat(form.totalFee) > 0 && (() => {
+                const b = computeBreakup(parseFloat(form.totalFee), 18, "gross_inclusive", true);
+                return (
+                  <div className="rounded-md bg-muted/40 p-3 text-xs space-y-1">
+                    <p className="font-medium text-foreground">Student Payable Breakup (GST 18%)</p>
+                    <div className="flex justify-between text-muted-foreground"><span>Course Fee (Taxable)</span><span className="tabular-nums">₹{b.taxable.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>CGST (9%)</span><span className="tabular-nums">₹{b.cgst.toLocaleString()}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>SGST (9%)</span><span className="tabular-nums">₹{b.sgst.toLocaleString()}</span></div>
+                    <div className="flex justify-between font-semibold text-foreground pt-1 border-t border-border"><span>Total Payable</span><span className="tabular-nums">₹{b.gross.toLocaleString()}</span></div>
+                  </div>
+                );
+              })()}
               <div>
                 <Label>Payment Status</Label>
                 <Select value={form.paymentStatus} onValueChange={(v) => setForm({ ...form, paymentStatus: v as PaymentStatus })}>

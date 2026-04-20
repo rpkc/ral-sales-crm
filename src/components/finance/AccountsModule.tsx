@@ -40,6 +40,10 @@ import {
   getDispatches, subscribeDispatch, dispatchForInvoice, registerDispatch, recordSend,
   type InvoiceDispatch,
 } from "@/lib/invoice-dispatch-store";
+import { GstAmountInput } from "./GstAmountInput";
+import { QuickInvoiceDialog } from "./QuickInvoiceDialog";
+import { BulkInvoiceDialog } from "./BulkInvoiceDialog";
+import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode } from "@/lib/gst-calc";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
@@ -218,6 +222,9 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <FinanceKpi label="Gross Billing" value={fmtINR(totalBilled)} hint="GST inclusive" tone="primary" icon={<FileText className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="Net Revenue" value={fmtINR(totalBilled - gstOutput)} hint="Excl. GST" tone="success" icon={<TrendingUp className="h-4 w-4" />} onClick={() => onJump("revenue")} />
+        <FinanceKpi label="GST Collected" value={fmtINR(gstOutput)} hint="Output tax" tone="primary" icon={<BadgePercent className="h-4 w-4" />} onClick={() => onJump("gst")} />
         <FinanceKpi label="Vendor Payables" value={fmtINR(vendorPayables)} tone="warning" onClick={() => onJump("vendors")} />
         <FinanceKpi label="EMI Overdues" value={emiOverdue} hint="accounts" tone={emiOverdue > 0 ? "destructive" : "success"} onClick={() => onJump("emi")} />
         <FinanceKpi label="Cash Runway" value={`${runway} days`} tone={runway > 60 ? "success" : runway > 30 ? "warning" : "destructive"} />
@@ -321,6 +328,8 @@ function BillingTab({ role }: { role: RoleScope }) {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [view, setView] = useState<Invoice | null>(null);
   const [dispatchInv, setDispatchInv] = useState<Invoice | null>(null);
 
@@ -405,10 +414,20 @@ function BillingTab({ role }: { role: RoleScope }) {
         onRowClick={(r) => setView(r)}
         exportName="invoices"
         toolbar={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {canBulkSend && (
               <Button size="sm" variant="outline" onClick={bulkSendOverdue} className="gap-1.5">
                 <Mail className="h-3.5 w-3.5" /> Bulk: Overdue Reminders
+              </Button>
+            )}
+            {canGenerate && (
+              <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)} className="gap-1.5">
+                <Layers className="h-3.5 w-3.5" /> Bulk Generate
+              </Button>
+            )}
+            {canGenerate && (
+              <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)} className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" /> Quick Invoice
               </Button>
             )}
             <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Create Invoice</Button>
@@ -416,6 +435,8 @@ function BillingTab({ role }: { role: RoleScope }) {
         }
       />
       <InvoiceFormDrawer open={open} onClose={() => setOpen(false)} />
+      <QuickInvoiceDialog open={quickOpen} onClose={() => setQuickOpen(false)} />
+      <BulkInvoiceDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
       <InvoiceViewDrawer invoice={view} onClose={() => setView(null)} />
       <InvoiceDispatchDialog invoice={dispatchInv} open={!!dispatchInv} onClose={() => setDispatchInv(null)} />
     </div>
@@ -431,31 +452,43 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
     programName: "",
     issueDate: new Date().toISOString().slice(0, 10),
     dueDate: new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10),
-    subtotal: 0, discount: 0, gstType: "Taxable" as GstType, gstRate: 18,
+    amount: 0, discount: 0, gstType: "Taxable" as GstType, gstRate: 18,
     gstin: "", notes: "",
+    mode: "gross_inclusive" as GstInputMode,
+    intra: true, intraOverridden: false,
   });
+
+  useEffect(() => {
+    if (!f.intraOverridden) {
+      const auto = detectIntraState(f.gstin);
+      if (auto !== f.intra) setF(s => ({ ...s, intra: auto }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.gstin]);
+
+  const effectiveRate = f.gstType === "Exempt" ? 0 : f.gstRate;
+  const breakup = computeBreakup(Math.max(0, f.amount - f.discount), effectiveRate, f.mode, f.intra);
 
   const submit = () => {
     if (!f.customerName.trim()) { toast({ title: "Student record not found.", description: "Party (student / institution) name is required.", variant: "destructive" }); return; }
-    if (f.subtotal <= 0) { toast({ title: "Invoice total cannot be zero.", description: "Enter a subtotal greater than ₹0.", variant: "destructive" }); return; }
+    const v = validateGstInput(f.amount, effectiveRate);
+    if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
     const inv = createInvoice({
       customerId: "c_" + Math.random().toString(36).slice(2, 6),
       customerName: f.customerName.trim(), customerType: f.customerType,
       revenueStream: f.revenueStream, programName: f.programName,
       issueDate: new Date(f.issueDate).toISOString(),
       dueDate: new Date(f.dueDate).toISOString(),
-      subtotal: f.subtotal, discount: f.discount,
-      gstType: f.gstType, gstRate: f.gstRate, gstin: f.gstin, notes: f.notes,
+      subtotal: breakup.taxable, discount: 0,
+      gstType: f.gstType, gstRate: effectiveRate, gstin: f.gstin, notes: f.notes,
     } as any, currentUser?.id || "u0");
-    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — KPIs updated.` });
+    inv.cgst = breakup.cgst; inv.sgst = breakup.sgst; inv.igst = breakup.igst;
+    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — Taxable ${fmtINR(breakup.taxable)} + GST ${fmtINR(breakup.gstAmount)}` });
     onClose();
   };
 
-  const taxable = f.subtotal - f.discount;
-  const gst = f.gstType === "Exempt" ? 0 : taxable * f.gstRate / 100;
-
   return (
-    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Invoice" description="GST-ready invoice with auto-numbering">
+    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Invoice" description="Enter gross fee — taxable & GST split automatically.">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Customer Name</Label><Input value={f.customerName} onChange={e => setF({ ...f, customerName: e.target.value })} /></div>
@@ -478,8 +511,6 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
           <div className="col-span-2"><Label>Program / Item</Label><Input value={f.programName} onChange={e => setF({ ...f, programName: e.target.value })} /></div>
           <div><Label>Issue Date</Label><Input type="date" value={f.issueDate} onChange={e => setF({ ...f, issueDate: e.target.value })} /></div>
           <div><Label>Due Date</Label><Input type="date" value={f.dueDate} onChange={e => setF({ ...f, dueDate: e.target.value })} /></div>
-          <div><Label>Subtotal (₹)</Label><Input type="number" value={f.subtotal || ""} onChange={e => setF({ ...f, subtotal: +e.target.value })} /></div>
-          <div><Label>Discount (₹)</Label><Input type="number" value={f.discount || ""} onChange={e => setF({ ...f, discount: +e.target.value })} /></div>
           <div><Label>GST Type</Label>
             <Select value={f.gstType} onValueChange={(v: any) => setF({ ...f, gstType: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -488,15 +519,26 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               </SelectContent>
             </Select>
           </div>
-          <div><Label>GST Rate %</Label><Input type="number" value={f.gstRate} onChange={e => setF({ ...f, gstRate: +e.target.value })} /></div>
-          <div className="col-span-2"><Label>GSTIN (optional)</Label><Input value={f.gstin} onChange={e => setF({ ...f, gstin: e.target.value })} /></div>
-          <div className="col-span-2"><Label>Notes</Label><Textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+          <div><Label>Discount (₹)</Label><Input type="number" min={0} value={f.discount || ""} onChange={e => setF({ ...f, discount: +e.target.value })} /></div>
+          <div className="col-span-2"><Label>GSTIN (optional)</Label><Input value={f.gstin} onChange={e => setF({ ...f, gstin: e.target.value })} placeholder="27AABCS1234F1Z9" /></div>
         </div>
-        <Card className="p-3 bg-muted/30 text-xs space-y-1">
-          <div className="flex justify-between"><span>Taxable</span><span>{fmtINR(taxable)}</span></div>
-          <div className="flex justify-between"><span>GST</span><span>{fmtINR(gst)}</span></div>
-          <div className="flex justify-between font-semibold text-sm pt-1 border-t"><span>Total</span><span>{fmtINR(taxable + gst)}</span></div>
-        </Card>
+
+        <GstAmountInput
+          amount={f.amount}
+          rate={effectiveRate}
+          mode={f.mode}
+          intraState={f.intra}
+          intraOverridden={f.intraOverridden}
+          gstin={f.gstin}
+          canEditRate={f.gstType === "Taxable"}
+          onAmountChange={(n) => setF({ ...f, amount: n })}
+          onRateChange={(n) => setF({ ...f, gstRate: n })}
+          onModeChange={(m) => setF({ ...f, mode: m })}
+          onIntraStateChange={(intra, manual) => setF({ ...f, intra, intraOverridden: manual ? true : f.intraOverridden })}
+        />
+
+        <div><Label>Notes</Label><Textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+        <p className="text-[11px] text-muted-foreground">Taxable fee and GST are calculated automatically based on the selected mode.</p>
         <Button className="w-full" onClick={submit}>Create Invoice</Button>
       </div>
     </FinanceDrawer>
