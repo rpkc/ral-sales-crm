@@ -184,6 +184,41 @@ export function getFinance() { return state; }
 
 export function resetFinance() { save(seed()); }
 
+/**
+ * One-time auto-seeding: any Partial invoice without an EMI schedule gets
+ * its balance split into 3 EMIs over 90 days. Idempotent + safe to call on every mount.
+ */
+export function autoSeedEmisForPartial(): number {
+  const seeded: EmiSchedule[] = [];
+  const targets = state.invoices.filter(i =>
+    (i.status === "Partial" || i.status === "Overdue") &&
+    i.amountPaid > 0 && i.amountPaid < i.total &&
+    !state.emiSchedules.some(e => e.invoiceId === i.id),
+  );
+  if (targets.length === 0) return 0;
+  targets.forEach(inv => {
+    const balance = inv.total - inv.amountPaid;
+    const each = Math.round(balance / 3);
+    for (let k = 1; k <= 3; k++) {
+      const due = new Date(Date.now() + (k * 30 - 5) * 86400000).toISOString();
+      seeded.push({
+        id: uid("emi"),
+        invoiceId: inv.id,
+        customerId: inv.customerId,
+        customerName: inv.customerName,
+        installmentNo: k,
+        dueDate: due,
+        amount: k === 3 ? balance - each * 2 : each,
+        status: k === 1 ? "Due" : "Upcoming",
+      });
+    }
+  });
+  state.emiSchedules = [...state.emiSchedules, ...seeded];
+  save({ ...state });
+  return seeded.length;
+}
+
+
 function log(entity: string, entityId: string, action: string, by: string, detail?: string) {
   state.logs.unshift({ id: uid("log"), entity, entityId, action, by, at: todayISO(), detail });
 }

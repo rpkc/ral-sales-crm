@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   getFinance, subscribeFinance, recomputeOverdue,
   createInvoice, recordPayment, createExpense, setExpenseStatus,
-  createVendor, createVendorBill, payVendorBill, createBudget, payEmi,
+  createVendor, createVendorBill, payVendorBill, createBudget, payEmi, autoSeedEmisForPartial,
 } from "@/lib/finance-store";
 import {
   Invoice, Payment, Expense, Vendor, VendorBill, Budget, EmiSchedule,
@@ -46,6 +46,8 @@ import { BulkInvoiceDialog } from "./BulkInvoiceDialog";
 import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode } from "@/lib/gst-calc";
 import { InvoiceEditDialog } from "./InvoiceEditDialog";
 import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
+import { ProjectionsTab } from "./ProjectionsTab";
+import { computeEmiMetrics, computeStudentRisk } from "@/lib/revenue-projection";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
@@ -76,6 +78,7 @@ function scope(role: string): RoleScope {
 const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "dashboard", label: "Dashboard", roles: ["owner", "manager", "executive"] },
   { id: "revenue", label: "Revenue", roles: ["owner"] },
+  { id: "projections", label: "Projections", roles: ["owner"] },
   { id: "billing", label: "Billing", roles: ["owner", "manager", "executive"] },
   { id: "collections", label: "Collections", roles: ["owner", "manager", "executive"] },
   { id: "emi", label: "EMI", roles: ["owner", "manager"] },
@@ -95,7 +98,7 @@ export function AccountsModule() {
   const tabs = ALL_TABS.filter(t => t.roles.includes(role));
   const [tab, setTab] = useState(tabs[0].id);
 
-  useEffect(() => { recomputeOverdue(); }, []);
+  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); }, []);
 
   return (
     <div className="space-y-6">
@@ -122,6 +125,7 @@ export function AccountsModule() {
 
         <TabsContent value="dashboard" className="mt-4"><DashboardTab onJump={setTab} /></TabsContent>
         <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
+        <TabsContent value="projections" className="mt-4"><ProjectionsTab /></TabsContent>
         <TabsContent value="billing" className="mt-4"><BillingTab role={role} /></TabsContent>
         <TabsContent value="collections" className="mt-4"><CollectionsTab role={role} /></TabsContent>
         <TabsContent value="emi" className="mt-4"><EmiTab /></TabsContent>
@@ -145,6 +149,9 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
   const editsToday = edits.filter(e => new Date(e.at).toDateString() === todayKey).length;
   const highValueChanges = edits.filter(e => e.highValue).length;
   const revisedBilling = edits.reduce((s, e) => s + e.amountDelta, 0);
+  const emiMetrics = computeEmiMetrics(fin.emiSchedules);
+  const riskRows = computeStudentRisk(fin.invoices, fin.emiSchedules);
+  const riskAtStake = riskRows.filter(r => r.riskLevel !== "low").reduce((s, r) => s + r.balanceDue, 0);
   const totalBilled = fin.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollected = fin.payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = fin.invoices.reduce((s, i) => s + (i.total - i.amountPaid), 0);
@@ -241,6 +248,10 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
         <FinanceKpi label="Invoice Edits Today" value={editsToday} hint={`${edits.length} all-time`} tone={editsToday > 0 ? "primary" : "default"} icon={<Pencil className="h-4 w-4" />} onClick={() => onJump("billing")} />
         <FinanceKpi label="High-Value Changes" value={highValueChanges} hint=">₹2.5L" tone={highValueChanges > 0 ? "warning" : "default"} icon={<AlertTriangle className="h-4 w-4" />} />
         <FinanceKpi label="Revised Billing" value={fmtINR(revisedBilling)} hint="Net delta" tone={revisedBilling >= 0 ? "success" : "destructive"} />
+        <FinanceKpi label="EMI Today" value={fmtINR(emiMetrics.todayDue)} tone={emiMetrics.todayDue > 0 ? "warning" : "default"} icon={<CalIcon className="h-4 w-4" />} onClick={() => onJump("emi")} />
+        <FinanceKpi label="Overdue EMI" value={fmtINR(emiMetrics.overdueTotal)} tone={emiMetrics.overdueTotal > 0 ? "destructive" : "success"} icon={<AlertTriangle className="h-4 w-4" />} onClick={() => onJump("emi")} />
+        <FinanceKpi label="Next 30d EMI" value={fmtINR(emiMetrics.next30Expected)} tone="primary" onClick={() => onJump("projections")} />
+        <FinanceKpi label="Risk Revenue" value={fmtINR(riskAtStake)} hint={`${riskRows.filter(r => r.riskLevel !== "low").length} students`} tone={riskAtStake > 0 ? "warning" : "success"} icon={<ShieldCheck className="h-4 w-4" />} onClick={() => onJump("projections")} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
