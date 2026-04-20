@@ -353,19 +353,36 @@ export function AllianceModule({ scope, executiveId, initialTab, initialAction, 
   const saveExpense = (vals: Record<string, unknown>) => {
     const all = allianceStore.getExpenses();
     const inst = data.institutions.find((i) => i.name === vals.institution);
+    const amount = Number(vals.amount) || 0;
+    const expenseType = vals.expenseType as AllianceExpense["expenseType"];
+    const execId = scope === "executive" && executiveId ? executiveId : userIdByLabel(String(vals.executive)) || "ae1";
     const newEx: AllianceExpense = {
       id: `ex${Date.now()}`,
-      executiveId: scope === "executive" && executiveId ? executiveId : userIdByLabel(String(vals.executive)) || "ae1",
+      executiveId: execId,
       institutionId: inst?.id ?? "",
-      expenseType: vals.expenseType as AllianceExpense["expenseType"],
-      amount: Number(vals.amount) || 0,
+      expenseType,
+      amount,
       billUrl: "",
       expenseDate: String(vals.expenseDate),
       status: "Submitted",
       notes: String(vals.notes || ""),
     };
     allianceStore.saveExpenses([newEx, ...all]);
-    toast.success("Expense submitted.");
+    // Auto-create approval routed to manager
+    if (currentUser) {
+      const requestType = expenseType === "Travel" ? "Travel Reimbursement" : "Expense Bill";
+      approvalStore.submit({
+        requestId: newEx.id,
+        requestType,
+        title: `${expenseType} ₹${amount.toLocaleString()} — ${userLabelById(execId)}`,
+        submittedBy: currentUser.id,
+        submittedRole: currentUser.role,
+        amount,
+        priority: amount > 2000 ? "High" : "Medium",
+        notes: newEx.notes || `${expenseType} expense for ${inst?.name ?? "—"}`,
+      });
+    }
+    toast.success("Expense submitted for approval.");
     setShowExpenseForm(false);
     bump();
   };
