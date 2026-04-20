@@ -22,7 +22,7 @@ import {
   Wallet, FileText, IndianRupee, AlertTriangle, TrendingUp, Receipt,
   Building2, Briefcase, Lightbulb, PlusCircle, Layers, FilePieChart,
   Truck, Calendar as CalIcon, BadgePercent, Plus, FileDown,
-  Send, Mail, MessageCircle, Download as DownloadIcon, ShieldCheck,
+  Send, Mail, MessageCircle, Download as DownloadIcon, ShieldCheck, Pencil,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -44,6 +44,8 @@ import { GstAmountInput } from "./GstAmountInput";
 import { QuickInvoiceDialog } from "./QuickInvoiceDialog";
 import { BulkInvoiceDialog } from "./BulkInvoiceDialog";
 import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode } from "@/lib/gst-calc";
+import { InvoiceEditDialog } from "./InvoiceEditDialog";
+import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
