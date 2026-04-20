@@ -6,6 +6,8 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import type { DispatchFormat } from "./invoice-dispatch-store";
 
+void undefined as unknown;
+
 export async function renderInvoiceFile(
   node: HTMLElement,
   filename: string,
