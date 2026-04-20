@@ -244,7 +244,7 @@ export function InvoiceDispatchDialog({ invoice, open, onClose }: Props) {
             <span>{invoice.customerName} · {fmtINR(invoice.total)}</span>
             {requiresApproval && (
               <Badge variant={isApproved ? "default" : "outline"} className={isApproved ? "bg-emerald-600" : "border-amber-400 text-amber-700"}>
-                {isApproved ? <><ShieldCheck className="h-3 w-3 mr-1" /> Approved</> : <><AlertTriangle className="h-3 w-3 mr-1" /> Approval required (>₹1L)</>}
+                {isApproved ? <><ShieldCheck className="h-3 w-3 mr-1" /> Approved</> : <><AlertTriangle className="h-3 w-3 mr-1" /> Approval required (&gt;₹1L)</>}
               </Badge>
             )}
             {existing && <Badge variant="outline" className="text-[10px]">Last status: {existing.status}</Badge>}
