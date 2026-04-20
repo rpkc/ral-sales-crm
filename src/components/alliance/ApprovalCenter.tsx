@@ -33,7 +33,7 @@ const STATUS_STYLES: Record<ApprovalStatus, string> = {
   Approved: "bg-success/10 text-success",
   Rejected: "bg-destructive/10 text-destructive",
   Hold: "bg-warning/10 text-warning",
-  Overridden: "bg-purple-500/10 text-purple-600",
+  Overridden: "bg-accent text-accent-foreground",
   Resubmitted: "bg-info/10 text-info",
 };
 
