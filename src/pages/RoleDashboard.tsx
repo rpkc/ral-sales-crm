@@ -1415,30 +1415,7 @@ export default function RoleDashboard() {
   }
 }
 
-// ── Alliance Dashboards (lightweight wrappers around shared module) ──
-import { AllianceModule } from "@/components/alliance/AllianceModule";
+// ── Alliance Dashboards (premium upgrade) ──
+import { AllianceManagerDashboard } from "@/components/alliance/AllianceManagerDashboard";
+import { AllianceExecutiveDashboard } from "@/components/alliance/AllianceExecutiveDashboard";
 
-function AllianceManagerDashboard() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Industry Alliances — Manager</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">Full visibility across institutions, executives & pipeline</p>
-      </div>
-      <AllianceModule scope="manager" />
-    </div>
-  );
-}
-
-function AllianceExecutiveDashboard() {
-  const { currentUser } = useAuth();
-  return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">My Alliances</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">Your assigned institutions & today's tasks</p>
-      </div>
-      <AllianceModule scope="executive" executiveId={currentUser?.id} />
-    </div>
-  );
-}
