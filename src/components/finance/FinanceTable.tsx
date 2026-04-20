@@ -20,7 +20,7 @@ export interface Column<T> {
 interface Props<T> {
   rows: T[];
   columns: Column<T>[];
-  searchKeys?: (keyof T | ((row: T) => string))[];
+  searchKeys?: (string | ((row: T) => string))[];
   onRowClick?: (row: T) => void;
   emptyText?: string;
   pageSize?: number;
