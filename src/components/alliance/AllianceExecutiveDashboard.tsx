@@ -157,19 +157,19 @@ export function AllianceExecutiveDashboard() {
       <div className="rounded-xl bg-card p-4 shadow-card">
         <h4 className="text-sm font-semibold text-card-foreground mb-3">Quick Actions</h4>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          <Link to="/institutional" onClick={handleQuickAction}>
+          <Link to="/alliances?tab=visits&action=new" onClick={handleQuickAction}>
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1"><Plus className="h-4 w-4" /><span className="text-[11px]">Log Visit</span></Button>
           </Link>
-          <Link to="/institutional" onClick={handleQuickAction}>
+          <Link to="/alliances?tab=contacts" onClick={handleQuickAction}>
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1"><Phone className="h-4 w-4" /><span className="text-[11px]">Add Contact</span></Button>
           </Link>
-          <Link to="/institutional" onClick={handleQuickAction}>
+          <Link to="/alliances?tab=tasks&action=new" onClick={handleQuickAction}>
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1"><Calendar className="h-4 w-4" /><span className="text-[11px]">Set Follow-up</span></Button>
           </Link>
-          <Link to="/institutional" onClick={handleQuickAction}>
+          <Link to="/alliances?tab=expenses&action=new" onClick={handleQuickAction}>
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1"><Receipt className="h-4 w-4" /><span className="text-[11px]">Claim Expense</span></Button>
           </Link>
-          <Link to="/institutional" onClick={handleQuickAction}>
+          <Link to="/alliances?tab=events&action=new" onClick={handleQuickAction}>
             <Button variant="outline" className="w-full h-auto py-3 flex flex-col gap-1"><PartyPopper className="h-4 w-4" /><span className="text-[11px]">Event Leads</span></Button>
           </Link>
         </div>
