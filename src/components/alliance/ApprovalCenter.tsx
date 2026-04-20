@@ -75,16 +75,19 @@ export function ApprovalCenter() {
   const all = useMemo(() => { void version; return userId ? approvalsForActor(userId, role) : []; }, [userId, role, version]);
   const pending = useMemo(() => { void version; return userId ? pendingForRole(userId, role) : []; }, [userId, role, version]);
   const logs = useMemo(() => { void version; return approvalStore.logs(); }, [version]);
-
-  if (!currentUser) return null;
   const filtered = useMemo(() => {
     return all.filter((a) => {
       if (filterStatus !== "all" && a.status !== filterStatus) return false;
       if (filterType !== "all" && a.requestType !== filterType) return false;
-      if (search && !a.title.toLowerCase().includes(search.toLowerCase()) && !userLabel(a.submittedBy).toLowerCase().includes(search.toLowerCase())) return false;
+      if (search) {
+        const sender = allUsers.find((u) => u.id === a.submittedBy)?.name ?? "";
+        if (!a.title.toLowerCase().includes(search.toLowerCase()) && !sender.toLowerCase().includes(search.toLowerCase())) return false;
+      }
       return true;
     });
-  }, [all, filterStatus, filterType, search]);
+  }, [all, filterStatus, filterType, search, allUsers]);
+
+  if (!currentUser) return null;
 
   // KPIs
   const approvedThisWeek = all.filter((a) => a.status === "Approved" && hoursSince(a.updatedAt) <= 168).length;
