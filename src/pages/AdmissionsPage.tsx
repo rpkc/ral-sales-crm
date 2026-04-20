@@ -3,8 +3,9 @@ import { store } from "@/lib/mock-data";
 import { Admission, PaymentStatus, PaymentMode, PaymentType, PaymentHistoryEntry } from "@/lib/types";
 import {
   MASTER_PAYMENT_MODES, MASTER_COURSE_NAMES, MASTER_BATCH_TIMINGS,
-  MASTER_SCHOLARSHIP_LEVELS,
+  MASTER_SCHOLARSHIP_LEVELS, getCourseFee,
 } from "@/lib/master-schema";
+import { computeBreakup } from "@/lib/gst-calc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
