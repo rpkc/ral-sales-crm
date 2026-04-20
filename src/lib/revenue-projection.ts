@@ -211,7 +211,7 @@ function finalize(buckets: MonthBucket[]) {
       b.confirmedCollections + b.scheduledEmis + b.continuationRevenue + b.newAdmissionForecast - b.riskLeakage;
     // Clamp tiny floats
     (Object.keys(b) as (keyof MonthBucket)[]).forEach(k => {
-      if (typeof b[k] === "number") (b as Record<string, number>)[k] = Math.round(b[k] as number);
+      if (typeof b[k] === "number") (b as unknown as Record<string, number>)[k] = Math.round(b[k] as number);
     });
   });
 }
