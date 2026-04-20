@@ -238,6 +238,75 @@ export function recordPayment(input: Omit<Payment, "id" | "receiptNo" | "created
   return pay;
 }
 
+/** Apply a partial patch to an invoice with auto-recalc of cgst/sgst/igst/total/status. */
+export function updateInvoice(
+  id: string,
+  patch: Partial<Pick<Invoice,
+    "customerName" | "customerType" | "revenueStream" | "programName"
+    | "issueDate" | "dueDate" | "subtotal" | "discount" | "gstType" | "gstRate"
+    | "gstin" | "notes" | "status"
+  >> & { intraState?: boolean },
+  by: string,
+): Invoice | null {
+  const inv = state.invoices.find(i => i.id === id);
+  if (!inv) return null;
+  const intra = patch.intraState ?? (inv.igst === 0);
+
+  Object.entries(patch).forEach(([k, v]) => {
+    if (k === "intraState") return;
+    if (v !== undefined) (inv as unknown as Record<string, unknown>)[k] = v;
+  });
+
+  // Recompute money fields
+  const taxable = Math.max(0, inv.subtotal - inv.discount);
+  const gst = inv.gstType === "Exempt" ? 0 : taxable * inv.gstRate / 100;
+  if (intra) { inv.cgst = gst / 2; inv.sgst = gst / 2; inv.igst = 0; }
+  else { inv.cgst = 0; inv.sgst = 0; inv.igst = gst; }
+  inv.total = taxable + gst;
+
+  // Recompute status based on amountPaid vs total
+  if (patch.status) {
+    inv.status = patch.status;
+  } else if (inv.status !== "Cancelled" && inv.status !== "Draft") {
+    if (inv.amountPaid >= inv.total && inv.total > 0) inv.status = "Paid";
+    else if (inv.amountPaid > 0) inv.status = "Partial";
+    else if (new Date(inv.dueDate).getTime() < Date.now()) inv.status = "Overdue";
+    else inv.status = "Sent";
+  }
+
+  log("Invoice", inv.id, "edited", by);
+  save({ ...state });
+  return inv;
+}
+
+export function cancelInvoice(id: string, by: string, reason?: string): Invoice | null {
+  const inv = state.invoices.find(i => i.id === id);
+  if (!inv) return null;
+  inv.status = "Cancelled";
+  log("Invoice", id, "cancelled", by, reason);
+  save({ ...state });
+  return inv;
+}
+
+export function cloneInvoice(id: string, by: string): Invoice | null {
+  const src = state.invoices.find(i => i.id === id);
+  if (!src) return null;
+  const cloned: Invoice = {
+    ...src,
+    id: uid("inv"),
+    invoiceNo: nextNo("inv", "INV"),
+    amountPaid: 0,
+    status: "Draft",
+    createdBy: by,
+    createdAt: todayISO(),
+    issueDate: todayISO(),
+  };
+  state.invoices.unshift(cloned);
+  log("Invoice", cloned.id, "cloned", by, `from ${src.invoiceNo}`);
+  save({ ...state });
+  return cloned;
+}
+
 /* ───────── Expenses ───────── */
 export function createExpense(input: Omit<Expense, "id" | "expenseNo" | "createdAt" | "total">, by: string): Expense {
   const exp: Expense = {

@@ -22,7 +22,7 @@ import {
   Wallet, FileText, IndianRupee, AlertTriangle, TrendingUp, Receipt,
   Building2, Briefcase, Lightbulb, PlusCircle, Layers, FilePieChart,
   Truck, Calendar as CalIcon, BadgePercent, Plus, FileDown,
-  Send, Mail, MessageCircle, Download as DownloadIcon, ShieldCheck,
+  Send, Mail, MessageCircle, Download as DownloadIcon, ShieldCheck, Pencil,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -44,6 +44,8 @@ import { GstAmountInput } from "./GstAmountInput";
 import { QuickInvoiceDialog } from "./QuickInvoiceDialog";
 import { BulkInvoiceDialog } from "./BulkInvoiceDialog";
 import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode } from "@/lib/gst-calc";
+import { InvoiceEditDialog } from "./InvoiceEditDialog";
+import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
@@ -138,6 +140,11 @@ export function AccountsModule() {
 /* ───────── Dashboard ───────── */
 function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
   const fin = useFinance();
+  const edits = useSyncExternalStore(subscribeInvoiceEdits, getInvoiceEdits, getInvoiceEdits);
+  const todayKey = new Date().toDateString();
+  const editsToday = edits.filter(e => new Date(e.at).toDateString() === todayKey).length;
+  const highValueChanges = edits.filter(e => e.highValue).length;
+  const revisedBilling = edits.reduce((s, e) => s + e.amountDelta, 0);
   const totalBilled = fin.invoices.reduce((s, i) => s + i.total, 0);
   const totalCollected = fin.payments.reduce((s, p) => s + p.amount, 0);
   const outstanding = fin.invoices.reduce((s, i) => s + (i.total - i.amountPaid), 0);
@@ -231,6 +238,9 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
         <FinanceKpi label="Top Revenue" value={topStream} hint={fmtINR(byStream[topStream] || 0)} tone="primary" onClick={() => onJump("revenue")} />
         <FinanceKpi label="Collection Eff." value={`${collectionEff.toFixed(1)}%`} tone={collectionEff > 70 ? "success" : "warning"} />
         <FinanceKpi label="Budget Variance" value={<BudgetVariance />} tone="default" onClick={() => onJump("budgets")} />
+        <FinanceKpi label="Invoice Edits Today" value={editsToday} hint={`${edits.length} all-time`} tone={editsToday > 0 ? "primary" : "default"} icon={<Pencil className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="High-Value Changes" value={highValueChanges} hint=">₹2.5L" tone={highValueChanges > 0 ? "warning" : "default"} icon={<AlertTriangle className="h-4 w-4" />} />
+        <FinanceKpi label="Revised Billing" value={fmtINR(revisedBilling)} hint="Net delta" tone={revisedBilling >= 0 ? "success" : "destructive"} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -332,6 +342,7 @@ function BillingTab({ role }: { role: RoleScope }) {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [view, setView] = useState<Invoice | null>(null);
   const [dispatchInv, setDispatchInv] = useState<Invoice | null>(null);
+  const [editInv, setEditInv] = useState<Invoice | null>(null);
 
   const dispatchByInv = useMemo(() => {
     const m = new Map<string, InvoiceDispatch>();
@@ -341,6 +352,7 @@ function BillingTab({ role }: { role: RoleScope }) {
 
   const canGenerate = role === "owner" || role === "manager" || currentUser?.role === "accounts_executive";
   const canBulkSend = role === "owner" || role === "manager";
+  const canEdit = role === "owner" || role === "manager";
 
   const visibleInvoices = useMemo(() => {
     if (role === "owner" || role === "manager") return fin.invoices;
@@ -383,9 +395,16 @@ function BillingTab({ role }: { role: RoleScope }) {
     {
       key: "actions", header: "",
       render: r => (
-        <Button size="sm" variant="outline" disabled={!canGenerate} onClick={(e) => { e.stopPropagation(); setDispatchInv(r); }} className="gap-1 h-7 text-[11px]">
-          <Send className="h-3 w-3" /> Send
-        </Button>
+        <div className="flex gap-1 justify-end">
+          {canEdit && (
+            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditInv(r); }} className="gap-1 h-7 text-[11px]" title="Edit invoice">
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
+          <Button size="sm" variant="outline" disabled={!canGenerate} onClick={(e) => { e.stopPropagation(); setDispatchInv(r); }} className="gap-1 h-7 text-[11px]">
+            <Send className="h-3 w-3" /> Send
+          </Button>
+        </div>
       ),
     },
   ];
@@ -439,6 +458,7 @@ function BillingTab({ role }: { role: RoleScope }) {
       <BulkInvoiceDialog open={bulkOpen} onClose={() => setBulkOpen(false)} />
       <InvoiceViewDrawer invoice={view} onClose={() => setView(null)} />
       <InvoiceDispatchDialog invoice={dispatchInv} open={!!dispatchInv} onClose={() => setDispatchInv(null)} />
+      <InvoiceEditDialog invoice={editInv} open={!!editInv} onClose={() => setEditInv(null)} />
     </div>
   );
 }
