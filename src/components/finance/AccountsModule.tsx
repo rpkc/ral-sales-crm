@@ -48,6 +48,7 @@ import { InvoiceEditDialog } from "./InvoiceEditDialog";
 import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
 import { ProjectionsTab } from "./ProjectionsTab";
 import { ReportsTab } from "./ReportsTab";
+import { VerificationsTab, VerifiedPaymentsTab, CollectionReportsTab } from "./CollectionControlTabs";
 import { computeEmiMetrics, computeStudentRisk, computePiTiSplit, computePiTiMonthlyTrend } from "@/lib/revenue-projection";
 import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
 import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
@@ -86,6 +87,8 @@ const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "revenue", label: "Revenue", roles: ["owner"] },
   { id: "projections", label: "Projections", roles: ["owner"] },
   { id: "billing", label: "Billing", roles: ["owner", "manager", "executive"] },
+  { id: "verifications", label: "Verifications", roles: ["owner", "manager"] },
+  { id: "verified_payments", label: "Verified → TI", roles: ["owner", "manager", "executive"] },
   { id: "collections", label: "Collections", roles: ["owner", "manager", "executive"] },
   { id: "emi", label: "EMI", roles: ["owner", "manager"] },
   { id: "expenses", label: "Expenses", roles: ["owner", "manager", "executive"] },
@@ -95,6 +98,7 @@ const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "cashflow", label: "Cash Flow", roles: ["owner"] },
   { id: "gst", label: "GST", roles: ["owner", "manager"] },
   { id: "reports", label: "Reports", roles: ["owner", "manager"] },
+  { id: "collection_reports", label: "Collection Reports", roles: ["owner", "manager"] },
   { id: "exports", label: "Exports", roles: ["owner", "manager"] },
 ];
 
@@ -134,6 +138,8 @@ export function AccountsModule() {
         <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
         <TabsContent value="projections" className="mt-4"><ProjectionsTab /></TabsContent>
         <TabsContent value="billing" className="mt-4"><BillingTab role={role} /></TabsContent>
+        <TabsContent value="verifications" className="mt-4"><VerificationsTab canVerify={currentUser?.role === "admin" || role === "owner" || role === "manager"} /></TabsContent>
+        <TabsContent value="verified_payments" className="mt-4"><VerifiedPaymentsTab role={role} /></TabsContent>
         <TabsContent value="collections" className="mt-4"><CollectionsTab role={role} /></TabsContent>
         <TabsContent value="emi" className="mt-4"><EmiTab /></TabsContent>
         <TabsContent value="expenses" className="mt-4"><ExpensesTab role={role} /></TabsContent>
@@ -143,6 +149,7 @@ export function AccountsModule() {
         <TabsContent value="cashflow" className="mt-4"><CashflowTab /></TabsContent>
         <TabsContent value="gst" className="mt-4"><GstTab /></TabsContent>
         <TabsContent value="reports" className="mt-4"><ReportsTab /></TabsContent>
+        <TabsContent value="collection_reports" className="mt-4"><CollectionReportsTab /></TabsContent>
         <TabsContent value="exports" className="mt-4"><ExportsTab /></TabsContent>
       </Tabs>
     </div>
