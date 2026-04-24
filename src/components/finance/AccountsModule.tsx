@@ -142,6 +142,7 @@ export function AccountsModule() {
         <TabsContent value="profit" className="mt-4"><ProfitTab /></TabsContent>
         <TabsContent value="cashflow" className="mt-4"><CashflowTab /></TabsContent>
         <TabsContent value="gst" className="mt-4"><GstTab /></TabsContent>
+        <TabsContent value="reports" className="mt-4"><ReportsTab /></TabsContent>
         <TabsContent value="exports" className="mt-4"><ExportsTab /></TabsContent>
       </Tabs>
     </div>
