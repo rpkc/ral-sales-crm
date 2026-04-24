@@ -48,6 +48,10 @@ import { InvoiceEditDialog } from "./InvoiceEditDialog";
 import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
 import { ProjectionsTab } from "./ProjectionsTab";
 import { computeEmiMetrics, computeStudentRisk } from "@/lib/revenue-projection";
+import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
+import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
+import { piOpenBalance, piConvertedAmount } from "@/lib/finance-store";
+import { ArrowRight } from "lucide-react";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
 
