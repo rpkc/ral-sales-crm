@@ -591,8 +591,28 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
   const breakup = computeBreakup(Math.max(0, f.amount - f.discount), effectiveRate, f.mode, f.intra);
 
   const submit = () => {
-    if (!f.customerName.trim()) { toast({ title: "Student record not found.", description: "Party (student / institution) name is required.", variant: "destructive" }); return; }
+    if (!f.customerName.trim()) { toast({ title: "Recipient name required.", variant: "destructive" }); return; }
+    if (!f.dueDate) { toast({ title: "PI due date is required.", variant: "destructive" }); return; }
     const v = validateGstInput(f.amount, effectiveRate);
+    if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
+    const inv = createInvoice({
+      invoiceType: "PI",
+      customerId: "c_" + Math.random().toString(36).slice(2, 6),
+      customerName: f.customerName.trim(), customerType: f.customerType,
+      revenueStream: f.revenueStream, programName: f.programName,
+      issueDate: new Date(f.issueDate).toISOString(),
+      dueDate: new Date(f.dueDate).toISOString(),
+      subtotal: breakup.taxable, discount: 0,
+      gstType: f.gstType, gstRate: effectiveRate, gstin: f.gstin, notes: f.notes,
+    } as any, currentUser?.id || "u0");
+    inv.cgst = breakup.cgst; inv.sgst = breakup.sgst; inv.igst = breakup.igst;
+    toast({ title: "Proforma Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — Receivable, no GST liability yet.` });
+    onClose();
+  };
+
+  return (
+    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Proforma Invoice (PI)" description="Use PI for dues / receivables before payment. Amount goes to receivables, not collected revenue.">
+
     if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
     const inv = createInvoice({
       customerId: "c_" + Math.random().toString(36).slice(2, 6),
