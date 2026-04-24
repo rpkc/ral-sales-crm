@@ -365,6 +365,8 @@ export default function AdmissionsPage() {
     setForm({ leadId: "", courseSelected: "", batch: "", admissionDate: "", totalFee: "", paymentStatus: "Pending", parentName: "", parentPhone: "", studentBankName: "", parentBankName: "" });
     setCreateOpen(false);
     toast.success("Admission created successfully.");
+    // Auto-PI prompt: open prefilled PI dialog after admission confirmation
+    setAutoPiAdm(newAdm);
   };
 
   const handlePaymentSave = (updated: Admission) => {
