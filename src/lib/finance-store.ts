@@ -489,3 +489,157 @@ export function recomputeOverdue() {
   });
   save({ ...state });
 }
+
+/* ───────── PI / TI helpers ───────── */
+import { recordMapping, getMappingsForPi } from "./pi-ti-store";
+
+/** How much of a PI has already been converted to TI(s). */
+export function piConvertedAmount(piId: string): number {
+  return getMappingsForPi(piId).reduce((s, m) => s + m.linkedAmount, 0);
+}
+
+/** Open balance still convertible on a PI. */
+export function piOpenBalance(piId: string): number {
+  const pi = state.invoices.find(i => i.id === piId);
+  if (!pi) return 0;
+  return Math.max(0, pi.total - piConvertedAmount(piId));
+}
+
+/** Update PI lifecycle status after conversion delta. */
+function refreshPiStatus(pi: Invoice) {
+  const converted = piConvertedAmount(pi.id);
+  if (converted >= pi.total - 0.5) pi.status = "Converted";
+  else if (converted > 0) pi.status = "Partial";
+}
+
+/**
+ * Convert (part of) a PI into a new TI. Optionally also record a payment.
+ * Returns { ti, mapping } or null if guard fails.
+ */
+export function convertPiToTi(args: {
+  piId: string;
+  amount: number;
+  by: string;
+  byName?: string;
+  reason?: string;
+  recordPaymentMode?: PaymentMode;
+}): { ti: Invoice; mappingId: string } | null {
+  const pi = state.invoices.find(i => i.id === args.piId);
+  if (!pi || pi.invoiceType !== "PI") return null;
+  const open = piOpenBalance(pi.id);
+  if (args.amount <= 0 || args.amount > open + 0.5) return null;
+
+  // Compute taxable + gst back from amount as gross-inclusive
+  const ratio = pi.total > 0 ? args.amount / pi.total : 1;
+  const taxable = pi.subtotal - pi.discount;
+  const tiTaxable = taxable * ratio;
+  const tiGst = pi.gstType === "Exempt" ? 0 : tiTaxable * pi.gstRate / 100;
+  const intra = pi.igst === 0;
+
+  const ti: Invoice = {
+    id: uid("inv"),
+    invoiceType: "TI",
+    invoiceNo: nextNo("ti", "TI"),
+    linkedPiId: pi.id,
+    customerId: pi.customerId,
+    customerName: pi.customerName,
+    customerType: pi.customerType,
+    revenueStream: pi.revenueStream,
+    programId: pi.programId,
+    programName: pi.programName,
+    issueDate: todayISO(),
+    dueDate: todayISO(),
+    subtotal: tiTaxable,
+    discount: 0,
+    gstType: pi.gstType,
+    gstRate: pi.gstRate,
+    cgst: intra ? tiGst / 2 : 0,
+    sgst: intra ? tiGst / 2 : 0,
+    igst: intra ? 0 : tiGst,
+    total: tiTaxable + tiGst,
+    amountPaid: 0,
+    status: "Sent",
+    notes: `Converted from ${pi.invoiceNo}`,
+    gstin: pi.gstin,
+    createdBy: args.by,
+    createdAt: todayISO(),
+  };
+  state.invoices.unshift(ti);
+
+  // Track mapping
+  const mapping = recordMapping({
+    piId: pi.id, piNo: pi.invoiceNo,
+    tiId: ti.id, tiNo: ti.invoiceNo,
+    studentId: pi.customerId, studentName: pi.customerName,
+    linkedAmount: args.amount,
+    convertedBy: args.by, convertedByName: args.byName,
+    mode: "convert", reason: args.reason,
+  });
+
+  // Update PI tracking
+  pi.convertedTiIds = [...(pi.convertedTiIds ?? []), ti.id];
+  refreshPiStatus(pi);
+
+  // Optional immediate payment on the new TI
+  if (args.recordPaymentMode) {
+    const pay: Payment = {
+      id: uid("pay"),
+      receiptNo: nextNo("rcpt", "RCP"),
+      invoiceId: ti.id,
+      customerId: ti.customerId,
+      customerName: ti.customerName,
+      amount: ti.total,
+      mode: args.recordPaymentMode,
+      reference: `TI-${ti.invoiceNo}`,
+      paidOn: todayISO(),
+      recordedBy: args.by,
+      createdAt: todayISO(),
+    };
+    state.payments.unshift(pay);
+    ti.amountPaid = ti.total;
+    ti.status = "Paid";
+    state.cashflow.unshift({ id: uid("cf"), date: pay.paidOn, type: "Inflow", source: "Payment", refId: pay.id, amount: pay.amount });
+  }
+
+  log("Invoice", ti.id, `converted from ${pi.invoiceNo}`, args.by, args.reason);
+  save({ ...state });
+  return { ti, mappingId: mapping.id };
+}
+
+/**
+ * Link an existing standalone TI back to a PI (e.g. walk-in cash case).
+ * Linked amount is min(TI total, PI open balance).
+ */
+export function linkExistingTiToPi(args: {
+  piId: string;
+  tiId: string;
+  by: string;
+  byName?: string;
+  reason?: string;
+}): { mappingId: string } | null {
+  const pi = state.invoices.find(i => i.id === args.piId);
+  const ti = state.invoices.find(i => i.id === args.tiId);
+  if (!pi || pi.invoiceType !== "PI" || !ti || ti.invoiceType !== "TI") return null;
+  if (ti.linkedPiId) return null;
+  const open = piOpenBalance(pi.id);
+  const linked = Math.min(ti.total, open);
+  if (linked <= 0) return null;
+
+  ti.linkedPiId = pi.id;
+  pi.convertedTiIds = [...(pi.convertedTiIds ?? []), ti.id];
+
+  const mapping = recordMapping({
+    piId: pi.id, piNo: pi.invoiceNo,
+    tiId: ti.id, tiNo: ti.invoiceNo,
+    studentId: pi.customerId, studentName: pi.customerName,
+    linkedAmount: linked,
+    convertedBy: args.by, convertedByName: args.byName,
+    mode: "link_existing", reason: args.reason,
+  });
+
+  refreshPiStatus(pi);
+  log("Invoice", ti.id, `linked to ${pi.invoiceNo}`, args.by, args.reason);
+  save({ ...state });
+  return { mappingId: mapping.id };
+}
+
