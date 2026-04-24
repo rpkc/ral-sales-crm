@@ -9,7 +9,8 @@ export type RevenueStream =
 
 export type PaymentMode = "Cash" | "Bank" | "UPI" | "Card" | "Cheque" | "Online";
 export type GstType = "Taxable" | "Exempt" | "Zero Rated";
-export type InvoiceStatus = "Draft" | "Sent" | "Partial" | "Paid" | "Overdue" | "Cancelled";
+export type InvoiceStatus = "Draft" | "Sent" | "Partial" | "Paid" | "Overdue" | "Cancelled" | "Converted" | "Expired";
+export type InvoiceType = "PI" | "TI";
 export type ExpenseCategory = "Marketing" | "Salaries" | "Travel" | "Rent" | "Vendor" | "Trainer" | "Office" | "Misc";
 export type ExpenseStatus = "Draft" | "Pending" | "Approved" | "Rejected" | "Paid" | "Hold";
 export type VendorBillStatus = "Pending" | "Approved" | "Paid" | "Overdue";
@@ -17,6 +18,12 @@ export type EmiStatus = "Upcoming" | "Due" | "Paid" | "Overdue";
 
 export interface Invoice {
   id: string;
+  /** PI = Proforma Invoice (receivable, no GST liability), TI = Tax Invoice (revenue) */
+  invoiceType?: InvoiceType;
+  /** When TI was created from a PI, holds the PI's id */
+  linkedPiId?: string;
+  /** When PI has been (partially) converted, list of TI ids derived from it */
+  convertedTiIds?: string[];
   invoiceNo: string;
   customerId: string;
   customerName: string;

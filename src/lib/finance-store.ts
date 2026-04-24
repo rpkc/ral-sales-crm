@@ -1,6 +1,6 @@
 import {
   Invoice, Payment, EmiSchedule, Expense, Vendor, VendorBill,
-  Budget, CashFlowEntry, FinanceLog, ExpenseCategory, PaymentMode,
+  Budget, CashFlowEntry, FinanceLog, ExpenseCategory, PaymentMode, InvoiceType,
 } from "./finance-types";
 
 const KEY = "ral_finance_v1";
@@ -17,7 +17,7 @@ interface FinanceState {
   budgets: Budget[];
   cashflow: CashFlowEntry[];
   logs: FinanceLog[];
-  counters: { inv: number; rcpt: number; exp: number; bill: number };
+  counters: { inv: number; rcpt: number; exp: number; bill: number; pi: number; ti: number };
 }
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}`;
@@ -153,16 +153,36 @@ function seed(): FinanceState {
   return {
     invoices, payments, emiSchedules, expenses, vendors, vendorBills, budgets, cashflow,
     logs: [],
-    counters: { inv: invoices.length, rcpt: payments.length, exp: expenses.length, bill: vendorBills.length },
+    counters: { inv: invoices.length, rcpt: payments.length, exp: expenses.length, bill: vendorBills.length, pi: 0, ti: 0 },
   };
 }
 
 function load(): FinanceState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: FinanceState = JSON.parse(raw);
+      // Backward-compat: ensure counters has pi/ti
+      parsed.counters = { pi: 0, ti: 0, ...parsed.counters };
+      // Backfill invoiceType for legacy seeded invoices by status
+      let mutated = false;
+      parsed.invoices.forEach(i => {
+        if (!i.invoiceType) {
+          i.invoiceType = (i.status === "Draft" || i.status === "Sent") ? "PI" : "TI";
+          mutated = true;
+        }
+      });
+      if (mutated) {
+        try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch {}
+      }
+      return parsed;
+    }
   } catch {}
   const s = seed();
+  // First-time seed: backfill PI/TI by status
+  s.invoices.forEach(i => {
+    if (!i.invoiceType) i.invoiceType = (i.status === "Draft" || i.status === "Sent") ? "PI" : "TI";
+  });
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
   return s;
 }
@@ -227,29 +247,41 @@ function nextNo(kind: keyof FinanceState["counters"], prefix: string): string {
   const n = state.counters[kind] + 1;
   state.counters[kind] = n;
   const d = new Date();
+  // PI/TI use yearly sequence: PI-2026-0001
+  if (kind === "pi" || kind === "ti") {
+    return `${prefix}-${d.getFullYear()}-${pad(n)}`;
+  }
   return `${prefix}-${d.getFullYear()}${pad(d.getMonth() + 1, 2)}-${pad(n)}`;
 }
 
 /* ───────── Invoices ───────── */
-export function createInvoice(input: Omit<Invoice, "id" | "invoiceNo" | "createdAt" | "cgst" | "sgst" | "igst" | "total" | "amountPaid" | "status">, by: string): Invoice {
+export function createInvoice(
+  input: Omit<Invoice, "id" | "invoiceNo" | "createdAt" | "cgst" | "sgst" | "igst" | "total" | "amountPaid" | "status">,
+  by: string,
+): Invoice {
   const taxable = input.subtotal - input.discount;
   const gst = input.gstType === "Exempt" ? 0 : taxable * input.gstRate / 100;
+  const type: InvoiceType = input.invoiceType ?? "PI";
+  const counterKind = type === "TI" ? "ti" : "pi";
+  const prefix = type === "TI" ? "TI" : "PI";
   const inv: Invoice = {
     ...input,
+    invoiceType: type,
     id: uid("inv"),
-    invoiceNo: nextNo("inv", "INV"),
+    invoiceNo: nextNo(counterKind, prefix),
     cgst: gst / 2, sgst: gst / 2, igst: 0,
     total: taxable + gst,
     amountPaid: 0,
-    status: "Sent",
+    status: type === "TI" ? "Sent" : "Sent",
     createdBy: by,
     createdAt: todayISO(),
   };
   state.invoices.unshift(inv);
-  log("Invoice", inv.id, "created", by);
+  log("Invoice", inv.id, `created ${type}`, by);
   save({ ...state });
   return inv;
 }
+
 
 export function recordPayment(input: Omit<Payment, "id" | "receiptNo" | "createdAt">, by: string): Payment {
   const pay: Payment = {
@@ -457,3 +489,157 @@ export function recomputeOverdue() {
   });
   save({ ...state });
 }
+
+/* ───────── PI / TI helpers ───────── */
+import { recordMapping, getMappingsForPi } from "./pi-ti-store";
+
+/** How much of a PI has already been converted to TI(s). */
+export function piConvertedAmount(piId: string): number {
+  return getMappingsForPi(piId).reduce((s, m) => s + m.linkedAmount, 0);
+}
+
+/** Open balance still convertible on a PI. */
+export function piOpenBalance(piId: string): number {
+  const pi = state.invoices.find(i => i.id === piId);
+  if (!pi) return 0;
+  return Math.max(0, pi.total - piConvertedAmount(piId));
+}
+
+/** Update PI lifecycle status after conversion delta. */
+function refreshPiStatus(pi: Invoice) {
+  const converted = piConvertedAmount(pi.id);
+  if (converted >= pi.total - 0.5) pi.status = "Converted";
+  else if (converted > 0) pi.status = "Partial";
+}
+
+/**
+ * Convert (part of) a PI into a new TI. Optionally also record a payment.
+ * Returns { ti, mapping } or null if guard fails.
+ */
+export function convertPiToTi(args: {
+  piId: string;
+  amount: number;
+  by: string;
+  byName?: string;
+  reason?: string;
+  recordPaymentMode?: PaymentMode;
+}): { ti: Invoice; mappingId: string } | null {
+  const pi = state.invoices.find(i => i.id === args.piId);
+  if (!pi || pi.invoiceType !== "PI") return null;
+  const open = piOpenBalance(pi.id);
+  if (args.amount <= 0 || args.amount > open + 0.5) return null;
+
+  // Compute taxable + gst back from amount as gross-inclusive
+  const ratio = pi.total > 0 ? args.amount / pi.total : 1;
+  const taxable = pi.subtotal - pi.discount;
+  const tiTaxable = taxable * ratio;
+  const tiGst = pi.gstType === "Exempt" ? 0 : tiTaxable * pi.gstRate / 100;
+  const intra = pi.igst === 0;
+
+  const ti: Invoice = {
+    id: uid("inv"),
+    invoiceType: "TI",
+    invoiceNo: nextNo("ti", "TI"),
+    linkedPiId: pi.id,
+    customerId: pi.customerId,
+    customerName: pi.customerName,
+    customerType: pi.customerType,
+    revenueStream: pi.revenueStream,
+    programId: pi.programId,
+    programName: pi.programName,
+    issueDate: todayISO(),
+    dueDate: todayISO(),
+    subtotal: tiTaxable,
+    discount: 0,
+    gstType: pi.gstType,
+    gstRate: pi.gstRate,
+    cgst: intra ? tiGst / 2 : 0,
+    sgst: intra ? tiGst / 2 : 0,
+    igst: intra ? 0 : tiGst,
+    total: tiTaxable + tiGst,
+    amountPaid: 0,
+    status: "Sent",
+    notes: `Converted from ${pi.invoiceNo}`,
+    gstin: pi.gstin,
+    createdBy: args.by,
+    createdAt: todayISO(),
+  };
+  state.invoices.unshift(ti);
+
+  // Track mapping
+  const mapping = recordMapping({
+    piId: pi.id, piNo: pi.invoiceNo,
+    tiId: ti.id, tiNo: ti.invoiceNo,
+    studentId: pi.customerId, studentName: pi.customerName,
+    linkedAmount: args.amount,
+    convertedBy: args.by, convertedByName: args.byName,
+    mode: "convert", reason: args.reason,
+  });
+
+  // Update PI tracking
+  pi.convertedTiIds = [...(pi.convertedTiIds ?? []), ti.id];
+  refreshPiStatus(pi);
+
+  // Optional immediate payment on the new TI
+  if (args.recordPaymentMode) {
+    const pay: Payment = {
+      id: uid("pay"),
+      receiptNo: nextNo("rcpt", "RCP"),
+      invoiceId: ti.id,
+      customerId: ti.customerId,
+      customerName: ti.customerName,
+      amount: ti.total,
+      mode: args.recordPaymentMode,
+      reference: `TI-${ti.invoiceNo}`,
+      paidOn: todayISO(),
+      recordedBy: args.by,
+      createdAt: todayISO(),
+    };
+    state.payments.unshift(pay);
+    ti.amountPaid = ti.total;
+    ti.status = "Paid";
+    state.cashflow.unshift({ id: uid("cf"), date: pay.paidOn, type: "Inflow", source: "Payment", refId: pay.id, amount: pay.amount });
+  }
+
+  log("Invoice", ti.id, `converted from ${pi.invoiceNo}`, args.by, args.reason);
+  save({ ...state });
+  return { ti, mappingId: mapping.id };
+}
+
+/**
+ * Link an existing standalone TI back to a PI (e.g. walk-in cash case).
+ * Linked amount is min(TI total, PI open balance).
+ */
+export function linkExistingTiToPi(args: {
+  piId: string;
+  tiId: string;
+  by: string;
+  byName?: string;
+  reason?: string;
+}): { mappingId: string } | null {
+  const pi = state.invoices.find(i => i.id === args.piId);
+  const ti = state.invoices.find(i => i.id === args.tiId);
+  if (!pi || pi.invoiceType !== "PI" || !ti || ti.invoiceType !== "TI") return null;
+  if (ti.linkedPiId) return null;
+  const open = piOpenBalance(pi.id);
+  const linked = Math.min(ti.total, open);
+  if (linked <= 0) return null;
+
+  ti.linkedPiId = pi.id;
+  pi.convertedTiIds = [...(pi.convertedTiIds ?? []), ti.id];
+
+  const mapping = recordMapping({
+    piId: pi.id, piNo: pi.invoiceNo,
+    tiId: ti.id, tiNo: ti.invoiceNo,
+    studentId: pi.customerId, studentName: pi.customerName,
+    linkedAmount: linked,
+    convertedBy: args.by, convertedByName: args.byName,
+    mode: "link_existing", reason: args.reason,
+  });
+
+  refreshPiStatus(pi);
+  log("Invoice", ti.id, `linked to ${pi.invoiceNo}`, args.by, args.reason);
+  save({ ...state });
+  return { mappingId: mapping.id };
+}
+

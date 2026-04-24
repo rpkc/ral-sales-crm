@@ -9,7 +9,7 @@ import { createInvoice } from "@/lib/finance-store";
 import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode } from "@/lib/gst-calc";
 import { GstAmountInput } from "./GstAmountInput";
 import { fmtINR } from "./FinanceKpi";
-import { Zap } from "lucide-react";
+import { FileCheck2 } from "lucide-react";
 
 interface Props { open: boolean; onClose: () => void }
 
@@ -43,19 +43,19 @@ export function QuickInvoiceDialog({ open, onClose }: Props) {
     if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
     const b = computeBreakup(amount, rate, mode, intra);
     const inv = createInvoice({
+      invoiceType: "TI",
       customerId: "c_" + Math.random().toString(36).slice(2, 6),
       customerName: recipient.trim(), customerType: "Student",
       revenueStream: "Student Admissions",
-      programName: program || "Quick Invoice",
+      programName: program || "Tax Invoice",
       issueDate: new Date().toISOString(),
-      dueDate: new Date(Date.now() + 15 * 86400000).toISOString(),
+      dueDate: new Date().toISOString(),
       subtotal: b.taxable, discount: 0,
       gstType: rate === 0 ? "Exempt" : "Taxable", gstRate: rate,
-      gstin, notes: `Generated via Quick Invoice (${mode === "gross_inclusive" ? "Gross" : "Net"} mode)`,
+      gstin, notes: `Tax Invoice (TI) — ${mode === "gross_inclusive" ? "Gross" : "Net"} mode`,
     } as any, currentUser?.id || "u0");
-    // Patch CGST/SGST/IGST split per chosen place-of-supply
     inv.cgst = b.cgst; inv.sgst = b.sgst; inv.igst = b.igst;
-    toast({ title: `${inv.invoiceNo} issued`, description: `${fmtINR(inv.total)} • Taxable ${fmtINR(b.taxable)} + GST ${fmtINR(b.gstAmount)}` });
+    toast({ title: `${inv.invoiceNo} issued (Tax Invoice)`, description: `${fmtINR(inv.total)} • Taxable ${fmtINR(b.taxable)} + GST ${fmtINR(b.gstAmount)}` });
     onClose();
   };
 
@@ -63,8 +63,12 @@ export function QuickInvoiceDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /> Quick Invoice</DialogTitle>
-          <DialogDescription>Enter the gross fee and we'll auto-split taxable value and GST.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <FileCheck2 className="h-4 w-4 text-emerald-600" />
+            Create Tax Invoice (TI)
+            <span className="ml-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">TI</span>
+          </DialogTitle>
+          <DialogDescription>Use TI only after payment is received. Counts in collected revenue and creates GST liability.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -78,7 +82,7 @@ export function QuickInvoiceDialog({ open, onClose }: Props) {
             onAmountChange={setAmount} onRateChange={setRate} onModeChange={setMode}
             onIntraStateChange={(v, manual) => { setIntra(v); if (manual) setIntraOverridden(true); }}
           />
-          <Button className="w-full" onClick={submit}>Generate Invoice</Button>
+          <Button className="w-full" onClick={submit}>Generate Tax Invoice</Button>
         </div>
       </DialogContent>
     </Dialog>
