@@ -30,8 +30,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ShieldCheck, Send, AlertTriangle, CheckCircle2, X, Clock, IndianRupee,
-  Plus, FileText, Eye, MessageSquare, Lock,
+  ShieldCheck, Send, AlertTriangle, CheckCircle2, X, Clock,
+  Plus, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
