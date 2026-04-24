@@ -1,6 +1,6 @@
 /**
  * Collection lifecycle notifications — toast + persistent log.
- * Six events per spec; pure in-memory + localStorage; no real channels.
+ * Covers original 6 events + the dual-collection / invoice-request workflow events.
  */
 import { toast } from "sonner";
 import type { Collection } from "./collection-store";
@@ -11,7 +11,13 @@ export type CollectionEvent =
   | "payment_verified"
   | "mismatch_detected"
   | "ti_ready_to_generate"
-  | "ti_generated";
+  | "ti_generated"
+  // Dual collection / invoice request workflow
+  | "invoice_request_created"
+  | "request_pending_over_6h"
+  | "bank_mismatch_detected"
+  | "invoice_issued"
+  | "request_rejected";
 
 export interface CollectionNotif {
   id: string;
@@ -81,6 +87,43 @@ export function notifyTiGeneratedFromCollection(c: Collection) {
   toast.success(e.message);
 }
 
+/** Invoice-request workflow notifications. */
+export function notifyInvoiceRequestCreated(c: Collection) {
+  if (!c.invoiceRequest || c.invoiceRequest.type === "none") return;
+  const e = emit({
+    event: "invoice_request_created",
+    message: `${c.invoiceRequest.type} request for ${c.studentName} (${c.receiptRef}) · awaiting ${c.invoiceRequest.status === "awaiting_admin_review" ? "admin" : "accounts"}`,
+    collectionId: c.id, amount: c.amount,
+  });
+  toast.success(e.message);
+}
+export function notifyInvoiceIssued(c: Collection) {
+  const r = c.invoiceRequest;
+  if (!r) return;
+  const e = emit({
+    event: "invoice_issued",
+    message: `${r.type} ${r.invoiceNo} issued for ${c.studentName} (${c.receiptRef})`,
+    collectionId: c.id, amount: c.amount,
+  });
+  toast.success(e.message);
+}
+export function notifyRequestRejected(c: Collection, reason: string) {
+  const e = emit({
+    event: "request_rejected",
+    message: `Invoice request for ${c.receiptRef} rejected: ${reason}`,
+    collectionId: c.id, amount: c.amount,
+  });
+  toast.warning(e.message);
+}
+export function notifyBankMismatch(c: Collection) {
+  const e = emit({
+    event: "bank_mismatch_detected",
+    message: `Bank mismatch on ${c.receiptRef} (${fmt(c.amount)})`,
+    collectionId: c.id, amount: c.amount,
+  });
+  toast.error(e.message);
+}
+
 /** Run once per session — surface collections older than 24h still awaiting verification. */
 const seenStale = new Set<string>();
 export function scanStalePendingVerifications(items: Collection[]) {
@@ -93,6 +136,23 @@ export function scanStalePendingVerifications(items: Collection[]) {
     emit({
       event: "collection_pending_verification_24h",
       message: `${c.receiptRef} pending verification > 24h · ${fmt(c.amount)} from ${c.studentName}`,
+      collectionId: c.id, amount: c.amount,
+    });
+  });
+}
+
+const seenStaleReq = new Set<string>();
+export function scanStaleInvoiceRequests(items: Collection[]) {
+  const cutoff = Date.now() - 6 * 3600 * 1000;
+  items.forEach(c => {
+    const r = c.invoiceRequest;
+    if (!r || !["awaiting_admin_review", "awaiting_accounts"].includes(r.status)) return;
+    if (!r.requestedAt || new Date(r.requestedAt).getTime() > cutoff) return;
+    if (seenStaleReq.has(c.id)) return;
+    seenStaleReq.add(c.id);
+    emit({
+      event: "request_pending_over_6h",
+      message: `${r.type} request for ${c.studentName} (${c.receiptRef}) pending > 6h`,
       collectionId: c.id, amount: c.amount,
     });
   });
