@@ -21,18 +21,32 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import {
   Mail, Lock, AlertCircle, Eye, EyeOff, ShieldCheck, ArrowRight, Check,
   Briefcase, Crown, Wallet, Settings2, WifiOff, Loader2, KeyRound, ShieldAlert,
+  Phone, HeartHandshake, Megaphone, Headphones, Building2, GraduationCap,
 } from "lucide-react";
 import { toast } from "sonner";
 
 /* ───────── Roles for the selector ───────── */
 
-type ChipRole = "accounts_executive" | "accounts_manager" | "owner" | "admin";
+type ChipRole =
+  | "accounts_executive" | "accounts_manager" | "owner" | "admin"
+  | "telecaller" | "telecalling_manager" | "counselor" | "marketing_manager"
+  | "alliance_manager" | "alliance_executive";
 
-const ROLE_CHIPS: { value: ChipRole; label: string; icon: typeof Crown; subtitle: string }[] = [
-  { value: "accounts_executive", label: "Accounts Executive", icon: Wallet, subtitle: "Daily billing, collections support and invoice operations." },
-  { value: "accounts_manager", label: "Accounts Manager", icon: Briefcase, subtitle: "Billing, reconciliation and finance controls." },
-  { value: "owner", label: "Owner", icon: Crown, subtitle: "Strategic revenue, approvals and executive visibility." },
-  { value: "admin", label: "Admin", icon: Settings2, subtitle: "Operations, verification and workflow controls." },
+type RoleTier = "premium" | "ops";
+
+const ROLE_CHIPS: { value: ChipRole; label: string; icon: typeof Crown; subtitle: string; tier: RoleTier }[] = [
+  // Premium tier — split-screen with branding & rotating trust messages
+  { value: "accounts_executive", label: "Accounts Executive", icon: Wallet, subtitle: "Daily billing, collections support and invoice operations.", tier: "premium" },
+  { value: "accounts_manager", label: "Accounts Manager", icon: Briefcase, subtitle: "Billing, reconciliation and finance controls.", tier: "premium" },
+  { value: "owner", label: "Owner", icon: Crown, subtitle: "Strategic revenue, approvals and executive visibility.", tier: "premium" },
+  { value: "admin", label: "Admin", icon: Settings2, subtitle: "Operations, verification and workflow controls.", tier: "premium" },
+  // Ops tier — compact single panel
+  { value: "telecaller", label: "Telecaller", icon: Phone, subtitle: "Call queue, lead follow-ups and conversion.", tier: "ops" },
+  { value: "telecalling_manager", label: "Telecalling Manager", icon: Headphones, subtitle: "Team performance, call quality and lead routing.", tier: "ops" },
+  { value: "counselor", label: "Counselor", icon: GraduationCap, subtitle: "Walk-ins, counseling outcomes and admissions.", tier: "ops" },
+  { value: "marketing_manager", label: "Marketing Manager", icon: Megaphone, subtitle: "Campaigns, lead sources and ROAS.", tier: "ops" },
+  { value: "alliance_manager", label: "Alliance Manager", icon: Building2, subtitle: "Institutional partnerships and program launches.", tier: "ops" },
+  { value: "alliance_executive", label: "Alliance Executive", icon: HeartHandshake, subtitle: "On-ground alliance visits and follow-ups.", tier: "ops" },
 ];
 
 /* ───────── Lockout helpers (localStorage) ───────── */
@@ -223,63 +237,67 @@ export default function LoginPage() {
 
   /* ───────── Render ───────── */
 
+  const isOpsTier = activeChip.tier === "ops";
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      {/* ════ Left panel — branding ════ */}
-      <aside className="hidden md:flex flex-col justify-between w-[42%] lg:w-[44%] bg-secondary text-secondary-foreground p-10 lg:p-14 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 30% 20%, hsl(var(--primary)) 0, transparent 45%), radial-gradient(circle at 80% 80%, hsl(var(--primary)) 0, transparent 40%)" }} />
+      {/* ════ Left panel — branding (premium tier only) ════ */}
+      {!isOpsTier && (
+        <aside className="hidden md:flex flex-col justify-between w-[42%] lg:w-[44%] bg-secondary text-secondary-foreground p-10 lg:p-14 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+            style={{ backgroundImage: "radial-gradient(circle at 30% 20%, hsl(var(--primary)) 0, transparent 45%), radial-gradient(circle at 80% 80%, hsl(var(--primary)) 0, transparent 40%)" }} />
 
-        <div className="relative animate-fade-up">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <span className="font-bold text-primary-foreground">RA</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Red Apple Learning</p>
-              <p className="text-[11px] text-secondary-foreground/60">Finance & Operations</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative space-y-6">
-          <div className="space-y-2 animate-fade-up">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/50">{greeting}</p>
-            <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
-              Red Apple Learning <span className="text-primary">Control Center</span>
-            </h1>
-            <p className="text-sm text-secondary-foreground/70 max-w-md">
-              Secure access to finance, billing and business intelligence.
-            </p>
-          </div>
-
-          {/* Rotating trust message — key forces re-mount + fade */}
-          <div key={trust} className="flex items-center gap-2 text-xs text-secondary-foreground/80 animate-fade-in-soft">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>{trust}</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 max-w-md">
-            {[
-              { k: "Verified", v: "Daily reconciliation" },
-              { k: "Encrypted", v: "256-bit session" },
-              { k: "Audited", v: "Full accountability" },
-              { k: "Real-time", v: "Live KPIs" },
-            ].map((x, i) => (
-              <div key={x.k}
-                className="rounded-lg border border-secondary-foreground/10 bg-secondary-foreground/[0.04] px-3 py-2.5 animate-fade-up"
-                style={{ animationDelay: `${100 + i * 70}ms` }}>
-                <p className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">{x.k}</p>
-                <p className="text-xs font-medium mt-0.5">{x.v}</p>
+          <div className="relative animate-fade-up">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+                <span className="font-bold text-primary-foreground">RA</span>
               </div>
-            ))}
+              <div>
+                <p className="text-sm font-semibold">Red Apple Learning</p>
+                <p className="text-[11px] text-secondary-foreground/60">Finance & Operations</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="relative text-[11px] text-secondary-foreground/50 flex items-center gap-2">
-          <span>Restricted system. Authorized personnel only.</span>
-        </div>
-      </aside>
+          <div className="relative space-y-6">
+            <div className="space-y-2 animate-fade-up">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/50">{greeting}</p>
+              <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
+                Red Apple Learning <span className="text-primary">Control Center</span>
+              </h1>
+              <p className="text-sm text-secondary-foreground/70 max-w-md">
+                Secure access to finance, billing and business intelligence.
+              </p>
+            </div>
+
+            {/* Rotating trust message — key forces re-mount + fade */}
+            <div key={trust} className="flex items-center gap-2 text-xs text-secondary-foreground/80 animate-fade-in-soft">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{trust}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              {[
+                { k: "Verified", v: "Daily reconciliation" },
+                { k: "Encrypted", v: "256-bit session" },
+                { k: "Audited", v: "Full accountability" },
+                { k: "Real-time", v: "Live KPIs" },
+              ].map((x, i) => (
+                <div key={x.k}
+                  className="rounded-lg border border-secondary-foreground/10 bg-secondary-foreground/[0.04] px-3 py-2.5 animate-fade-up"
+                  style={{ animationDelay: `${100 + i * 70}ms` }}>
+                  <p className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">{x.k}</p>
+                  <p className="text-xs font-medium mt-0.5">{x.v}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative text-[11px] text-secondary-foreground/50 flex items-center gap-2">
+            <span>Restricted system. Authorized personnel only.</span>
+          </div>
+        </aside>
+      )}
 
       {/* ════ Right panel — login ════ */}
       <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
@@ -306,34 +324,68 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Role chips */}
-          <div className="space-y-2 animate-fade-up">
+          {/* Role chips — grouped by tier */}
+          <div className="space-y-3 animate-fade-up">
             <Label className="text-xs text-muted-foreground">Select Access Role</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLE_CHIPS.map(r => {
-                const Icon = r.icon;
-                const active = chipRole === r.value;
-                return (
-                  <button
-                    key={r.value}
-                    type="button"
-                    onClick={() => setChipRole(r.value)}
-                    aria-pressed={active}
-                    className={`group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-200 ${
-                      active
-                        ? "border-primary bg-primary/5 shadow-card"
-                        : "border-border bg-card hover:border-primary/40 hover:bg-accent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Icon className={`h-3.5 w-3.5 transition-colors ${active ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-                      <span className={`text-xs font-medium ${active ? "text-foreground" : "text-foreground/80"}`}>{r.label}</span>
-                    </div>
-                    {active && <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary" />}
-                  </button>
-                );
-              })}
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Finance & Leadership</p>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_CHIPS.filter(r => r.tier === "premium").map(r => {
+                  const Icon = r.icon;
+                  const active = chipRole === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setChipRole(r.value)}
+                      aria-pressed={active}
+                      className={`group relative rounded-lg border px-3 py-2.5 text-left transition-all duration-200 ${
+                        active
+                          ? "border-primary bg-primary/5 shadow-card"
+                          : "border-border bg-card hover:border-primary/40 hover:bg-accent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-3.5 w-3.5 transition-colors ${active ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                        <span className={`text-xs font-medium ${active ? "text-foreground" : "text-foreground/80"}`}>{r.label}</span>
+                      </div>
+                      {active && <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Operations & Sales</p>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLE_CHIPS.filter(r => r.tier === "ops").map(r => {
+                  const Icon = r.icon;
+                  const active = chipRole === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setChipRole(r.value)}
+                      aria-pressed={active}
+                      className={`group relative rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+                        active
+                          ? "border-primary bg-primary/5 shadow-card"
+                          : "border-border bg-card hover:border-primary/40 hover:bg-accent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-3.5 w-3.5 transition-colors ${active ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
+                        <span className={`text-[11px] font-medium ${active ? "text-foreground" : "text-foreground/80"}`}>{r.label}</span>
+                      </div>
+                      {active && <div className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <p key={chipRole} className="text-[11px] text-muted-foreground animate-fade-in-soft">
               {activeChip.subtitle}
             </p>

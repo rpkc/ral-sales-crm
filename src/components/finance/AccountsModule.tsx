@@ -50,6 +50,7 @@ import { ProjectionsTab } from "./ProjectionsTab";
 import { ReportsTab } from "./ReportsTab";
 import { VerificationsTab, VerifiedPaymentsTab, CollectionReportsTab } from "./CollectionControlTabs";
 import { CollectionsLogTab, InvoiceRequestsTab } from "./InvoiceRequestTabs";
+import { BillingChart } from "@/components/billing/BillingChart";
 import { computeEmiMetrics, computeStudentRisk, computePiTiSplit, computePiTiMonthlyTrend } from "@/lib/revenue-projection";
 import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
 import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
@@ -85,6 +86,7 @@ function scope(role: string): RoleScope {
 
 const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "dashboard", label: "Dashboard", roles: ["owner", "manager", "executive"] },
+  { id: "billing_chart", label: "Billing Chart", roles: ["owner", "manager", "executive"] },
   { id: "revenue", label: "Revenue", roles: ["owner"] },
   { id: "projections", label: "Projections", roles: ["owner"] },
   { id: "billing", label: "Billing", roles: ["owner", "manager", "executive"] },
@@ -138,6 +140,7 @@ export function AccountsModule() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-4"><DashboardTab onJump={setTab} /></TabsContent>
+        <TabsContent value="billing_chart" className="mt-4"><BillingChart /></TabsContent>
         <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
         <TabsContent value="projections" className="mt-4"><ProjectionsTab /></TabsContent>
         <TabsContent value="billing" className="mt-4"><BillingTab role={role} /></TabsContent>
