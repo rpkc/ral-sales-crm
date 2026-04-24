@@ -612,24 +612,9 @@ function InvoiceFormDrawer({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Proforma Invoice (PI)" description="Use PI for dues / receivables before payment. Amount goes to receivables, not collected revenue.">
-
-    if (!v.ok) { toast({ title: v.error || "Invalid amount", variant: "destructive" }); return; }
-    const inv = createInvoice({
-      customerId: "c_" + Math.random().toString(36).slice(2, 6),
-      customerName: f.customerName.trim(), customerType: f.customerType,
-      revenueStream: f.revenueStream, programName: f.programName,
-      issueDate: new Date(f.issueDate).toISOString(),
-      dueDate: new Date(f.dueDate).toISOString(),
-      subtotal: breakup.taxable, discount: 0,
-      gstType: f.gstType, gstRate: effectiveRate, gstin: f.gstin, notes: f.notes,
-    } as any, currentUser?.id || "u0");
-    inv.cgst = breakup.cgst; inv.sgst = breakup.sgst; inv.igst = breakup.igst;
-    toast({ title: "Invoice issued", description: `${inv.invoiceNo} · ${fmtINR(inv.total)} — Taxable ${fmtINR(breakup.taxable)} + GST ${fmtINR(breakup.gstAmount)}` });
-    onClose();
-  };
-
-  return (
-    <FinanceDrawer open={open} onOpenChange={(o) => !o && onClose()} title="Create Invoice" description="Enter gross fee — taxable & GST split automatically.">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Recipient Name</Label><Input value={f.customerName} onChange={e => setF({ ...f, customerName: e.target.value })} /></div>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Customer Name</Label><Input value={f.customerName} onChange={e => setF({ ...f, customerName: e.target.value })} /></div>
