@@ -346,10 +346,17 @@ function RevenueTab() {
   );
 }
 
-/* ───────── Billing ───────── */
+/* ───────── Billing (PI / TI unified) ───────── */
+type BillingFilter = "all" | "pi" | "ti" | "open_pi" | "converted_pi" | "today_ti";
+
+function usePiTi() {
+  return useSyncExternalStore(subscribePiTi, getPiTiMappings, getPiTiMappings);
+}
+
 function BillingTab({ role }: { role: RoleScope }) {
   const fin = useFinance();
   const dispatches = useDispatchList();
+  const mappings = usePiTi();
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -358,6 +365,8 @@ function BillingTab({ role }: { role: RoleScope }) {
   const [view, setView] = useState<Invoice | null>(null);
   const [dispatchInv, setDispatchInv] = useState<Invoice | null>(null);
   const [editInv, setEditInv] = useState<Invoice | null>(null);
+  const [convertPi, setConvertPi] = useState<Invoice | null>(null);
+  const [filter, setFilter] = useState<BillingFilter>("all");
 
   const dispatchByInv = useMemo(() => {
     const m = new Map<string, InvoiceDispatch>();
@@ -368,12 +377,32 @@ function BillingTab({ role }: { role: RoleScope }) {
   const canGenerate = role === "owner" || role === "manager" || currentUser?.role === "accounts_executive";
   const canBulkSend = role === "owner" || role === "manager";
   const canEdit = role === "owner" || role === "manager";
+  const canConvert = role === "owner" || role === "manager";
 
-  const visibleInvoices = useMemo(() => {
+  const baseVisible = useMemo(() => {
     if (role === "owner" || role === "manager") return fin.invoices;
     const myId = currentUser?.id;
     return fin.invoices.filter(i => i.createdBy === myId || dispatchByInv.get(i.id)?.generatedBy === myId);
   }, [fin.invoices, role, currentUser?.id, dispatchByInv]);
+
+  const todayKey = new Date().toDateString();
+  const visibleInvoices = useMemo(() => {
+    const t = (i: Invoice) => i.invoiceType ?? "PI";
+    switch (filter) {
+      case "pi":            return baseVisible.filter(i => t(i) === "PI");
+      case "ti":            return baseVisible.filter(i => t(i) === "TI");
+      case "open_pi":       return baseVisible.filter(i => t(i) === "PI" && piOpenBalance(i.id) > 0 && i.status !== "Cancelled" && i.status !== "Converted");
+      case "converted_pi":  return baseVisible.filter(i => t(i) === "PI" && (i.convertedTiIds?.length ?? 0) > 0);
+      case "today_ti":      return baseVisible.filter(i => t(i) === "TI" && new Date(i.issueDate).toDateString() === todayKey);
+      default:              return baseVisible;
+    }
+  }, [baseVisible, filter, todayKey]);
+
+  const piMap = useMemo(() => {
+    const m = new Map<string, Invoice>();
+    fin.invoices.forEach(i => m.set(i.id, i));
+    return m;
+  }, [fin.invoices]);
 
   const bulkSendOverdue = () => {
     const targets = visibleInvoices.filter(i => i.status === "Overdue");
@@ -389,28 +418,53 @@ function BillingTab({ role }: { role: RoleScope }) {
   };
 
   const cols: Column<Invoice>[] = [
+    {
+      key: "type", header: "Type",
+      render: r => {
+        const t = r.invoiceType ?? "PI";
+        return t === "TI"
+          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-700">TI</span>
+          : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700">PI</span>;
+      },
+      exportValue: r => r.invoiceType ?? "PI",
+    },
     { key: "no", header: "Invoice #", render: r => <span className="font-mono text-xs">{r.invoiceNo}</span>, sortValue: r => r.invoiceNo, exportValue: r => r.invoiceNo },
-    { key: "cust", header: "Customer", render: r => <div><div className="font-medium text-sm">{r.customerName}</div><div className="text-[11px] text-muted-foreground">{r.customerType}</div></div>, sortValue: r => r.customerName, exportValue: r => r.customerName },
+    {
+      key: "ref", header: "Linked",
+      render: r => {
+        if (r.invoiceType === "TI" && r.linkedPiId) {
+          const pi = piMap.get(r.linkedPiId);
+          return <span className="text-[11px] text-muted-foreground font-mono">↳ {pi?.invoiceNo ?? "—"}</span>;
+        }
+        if (r.invoiceType === "PI" && (r.convertedTiIds?.length ?? 0) > 0) {
+          return <span className="text-[11px] text-emerald-700">{r.convertedTiIds!.length} TI{r.convertedTiIds!.length > 1 ? "s" : ""}</span>;
+        }
+        return <span className="text-[11px] text-muted-foreground">—</span>;
+      },
+      exportValue: r => r.linkedPiId ? piMap.get(r.linkedPiId)?.invoiceNo ?? "" : (r.convertedTiIds?.length ? `${r.convertedTiIds.length} TIs` : ""),
+    },
+    { key: "cust", header: "Recipient", render: r => <div><div className="font-medium text-sm">{r.customerName}</div><div className="text-[11px] text-muted-foreground">{r.customerType}</div></div>, sortValue: r => r.customerName, exportValue: r => r.customerName },
     { key: "stream", header: "Stream", render: r => <span className="text-xs">{r.revenueStream}</span>, exportValue: r => r.revenueStream },
     { key: "issue", header: "Issued", render: r => fmtDate(r.issueDate), sortValue: r => r.issueDate, exportValue: r => fmtDate(r.issueDate) },
-    { key: "due", header: "Due", render: r => fmtDate(r.dueDate), sortValue: r => r.dueDate, exportValue: r => fmtDate(r.dueDate) },
-    { key: "total", header: "Total", render: r => <span className="font-semibold tabular-nums">{fmtINR(r.total)}</span>, sortValue: r => r.total, exportValue: r => r.total },
+    {
+      key: "due", header: "Due",
+      render: r => r.invoiceType === "TI"
+        ? <span className="text-[11px] text-muted-foreground">—</span>
+        : fmtDate(r.dueDate),
+      sortValue: r => r.dueDate, exportValue: r => r.invoiceType === "TI" ? "" : fmtDate(r.dueDate),
+    },
+    { key: "total", header: "Amount", render: r => <span className="font-semibold tabular-nums">{fmtINR(r.total)}</span>, sortValue: r => r.total, exportValue: r => r.total },
     { key: "paid", header: "Paid", render: r => <span className="tabular-nums text-emerald-700">{fmtINR(r.amountPaid)}</span>, sortValue: r => r.amountPaid, exportValue: r => r.amountPaid },
     { key: "status", header: "Status", render: r => <StatusPill status={r.status} tone={statusTone(r.status)} />, exportValue: r => r.status },
-    {
-      key: "dispatch", header: "Dispatch",
-      render: r => {
-        const d = dispatchByInv.get(r.id);
-        if (!d) return <span className="text-[11px] text-muted-foreground">—</span>;
-        const tone = d.status.startsWith("sent") ? "success" : d.status === "failed" ? "destructive" : d.status === "pending_approval" ? "warning" : "primary";
-        return <StatusPill status={d.status.replace(/_/g, " ")} tone={tone} />;
-      },
-      exportValue: r => dispatchByInv.get(r.id)?.status || "",
-    },
     {
       key: "actions", header: "",
       render: r => (
         <div className="flex gap-1 justify-end">
+          {canConvert && r.invoiceType === "PI" && r.status !== "Converted" && r.status !== "Cancelled" && piOpenBalance(r.id) > 0 && (
+            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setConvertPi(r); }} className="gap-1 h-7 text-[11px]" title="Convert PI to TI">
+              <ArrowRight className="h-3 w-3" /> Convert
+            </Button>
+          )}
           {canEdit && (
             <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditInv(r); }} className="gap-1 h-7 text-[11px]" title="Edit invoice">
               <Pencil className="h-3 w-3" />
@@ -424,23 +478,52 @@ function BillingTab({ role }: { role: RoleScope }) {
     },
   ];
 
-  const todayKey = new Date().toDateString();
-  const generatedToday = dispatches.filter(d => new Date(d.generatedAt).toDateString() === todayKey).length;
-  const sentToday = dispatches.filter(d => d.lastSentAt && new Date(d.lastSentAt).toDateString() === todayKey).length;
-  const failed = dispatches.filter(d => d.status === "failed").length;
-  const pendingApproval = dispatches.filter(d => d.status === "pending_approval").length;
-  const sentCount = dispatches.filter(d => d.status.startsWith("sent")).length;
-  const successRate = dispatches.length ? Math.round((sentCount / dispatches.length) * 100) : 0;
+  // PI / TI billing KPIs
+  const piList = baseVisible.filter(i => (i.invoiceType ?? "PI") === "PI" && i.status !== "Cancelled");
+  const tiList = baseVisible.filter(i => i.invoiceType === "TI" && i.status !== "Cancelled");
+  const piOutstanding = piList.reduce((s, p) => s + piOpenBalance(p.id), 0);
+  const piDueToday = piList.filter(p => piOpenBalance(p.id) > 0 && new Date(p.dueDate).toDateString() === todayKey).length;
+  const piOverdue = piList.filter(p => piOpenBalance(p.id) > 0 && new Date(p.dueDate).getTime() < Date.now()).length;
+  const tiToday = tiList.filter(t => new Date(t.issueDate).toDateString() === todayKey).length;
+  const piTotalRaised = piList.reduce((s, p) => s + p.total, 0);
+  const piConverted = piList.reduce((s, p) => s + piConvertedAmount(p.id), 0);
+  const conversionPct = piTotalRaised > 0 ? Math.round((piConverted / piTotalRaised) * 100) : 0;
+  const failedMappings = mappings.filter(m => m.linkedAmount <= 0).length;
+  const monthKey = new Date().toISOString().slice(0, 7);
+  const gstFromTi = tiList
+    .filter(t => t.issueDate.startsWith(monthKey))
+    .reduce((s, t) => s + t.cgst + t.sgst + t.igst, 0);
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <FinanceKpi label="Generated Today" value={generatedToday} tone="primary" icon={<FileText className="h-4 w-4" />} />
-        <FinanceKpi label="Sent Today" value={sentToday} tone="success" icon={<Send className="h-4 w-4" />} />
-        <FinanceKpi label="Failed" value={failed} tone={failed > 0 ? "destructive" : "default"} icon={<AlertTriangle className="h-4 w-4" />} />
-        <FinanceKpi label="Pending Approval" value={pendingApproval} tone={pendingApproval > 0 ? "warning" : "default"} icon={<ShieldCheck className="h-4 w-4" />} />
-        <FinanceKpi label="Success Rate" value={`${successRate}%`} tone={successRate >= 80 ? "success" : "warning"} />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <FinanceKpi label="PI Outstanding" value={fmtINR(piOutstanding)} hint={`${piList.filter(p => piOpenBalance(p.id) > 0).length} open`} tone="warning" icon={<FileText className="h-4 w-4" />} onClick={() => setFilter("open_pi")} />
+        <FinanceKpi label="PI Due Today" value={piDueToday} tone={piDueToday > 0 ? "warning" : "default"} onClick={() => setFilter("open_pi")} />
+        <FinanceKpi label="PI Overdue" value={piOverdue} tone={piOverdue > 0 ? "destructive" : "success"} icon={<AlertTriangle className="h-4 w-4" />} onClick={() => setFilter("open_pi")} />
+        <FinanceKpi label="TI Today" value={tiToday} tone="success" icon={<Receipt className="h-4 w-4" />} onClick={() => setFilter("today_ti")} />
+        <FinanceKpi label="PI→TI Conversion" value={`${conversionPct}%`} tone={conversionPct >= 60 ? "success" : "warning"} onClick={() => setFilter("converted_pi")} />
+        <FinanceKpi label="GST from TI (mo)" value={fmtINR(gstFromTi)} hint="This month" tone="primary" icon={<BadgePercent className="h-4 w-4" />} />
+        <FinanceKpi label="Mappings" value={mappings.length} hint={failedMappings > 0 ? `${failedMappings} failed` : "all healthy"} tone={failedMappings > 0 ? "destructive" : "default"} icon={<ArrowRight className="h-4 w-4" />} />
+        <FinanceKpi label="Total Invoices" value={baseVisible.length} hint={`${piList.length} PI · ${tiList.length} TI`} tone="default" />
       </div>
+
+      <div className="flex flex-wrap gap-1.5 items-center">
+        <span className="text-xs text-muted-foreground mr-1">Filter:</span>
+        {([
+          ["all", "All"], ["pi", "PI only"], ["ti", "TI only"],
+          ["open_pi", "Open PI"], ["converted_pi", "Converted PI"], ["today_ti", "Today's TI"],
+        ] as [BillingFilter, string][]).map(([k, label]) => (
+          <button
+            key={k} onClick={() => setFilter(k)}
+            className={`text-[11px] px-2 py-1 rounded border transition ${
+              filter === k
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-muted border-border"
+            }`}
+          >{label}</button>
+        ))}
+      </div>
+
       <FinanceTable<Invoice>
         rows={visibleInvoices}
         columns={cols}
@@ -451,7 +534,7 @@ function BillingTab({ role }: { role: RoleScope }) {
           <div className="flex flex-wrap gap-2">
             {canBulkSend && (
               <Button size="sm" variant="outline" onClick={bulkSendOverdue} className="gap-1.5">
-                <Mail className="h-3.5 w-3.5" /> Bulk: Overdue Reminders
+                <Mail className="h-3.5 w-3.5" /> Bulk: PI Reminders
               </Button>
             )}
             {canGenerate && (
@@ -460,11 +543,13 @@ function BillingTab({ role }: { role: RoleScope }) {
               </Button>
             )}
             {canGenerate && (
-              <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)} className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" /> Quick Invoice
+              <Button size="sm" variant="outline" onClick={() => setQuickOpen(true)} className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50" title="Use TI only after payment is received">
+                <Plus className="h-3.5 w-3.5" /> Create Tax Invoice
               </Button>
             )}
-            <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5"><Plus className="h-3.5 w-3.5" /> Create Invoice</Button>
+            <Button size="sm" onClick={() => setOpen(true)} className="gap-1.5" title="Use PI for dues / receivables before payment">
+              <Plus className="h-3.5 w-3.5" /> Create Proforma Invoice
+            </Button>
           </div>
         }
       />
@@ -474,6 +559,7 @@ function BillingTab({ role }: { role: RoleScope }) {
       <InvoiceViewDrawer invoice={view} onClose={() => setView(null)} />
       <InvoiceDispatchDialog invoice={dispatchInv} open={!!dispatchInv} onClose={() => setDispatchInv(null)} />
       <InvoiceEditDialog invoice={editInv} open={!!editInv} onClose={() => setEditInv(null)} />
+      <PiToTiConvertDialog pi={convertPi} open={!!convertPi} onClose={() => setConvertPi(null)} />
     </div>
   );
 }
