@@ -91,12 +91,38 @@ export default {
           "0%": { backgroundColor: "hsl(var(--accent))" },
           "100%": { backgroundColor: "transparent" },
         },
+        "field-shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-6px)" },
+          "40%, 80%": { transform: "translateX(6px)" },
+        },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in-soft": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "soft-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 hsl(var(--primary) / 0.0)" },
+          "50%": { boxShadow: "0 0 0 6px hsl(var(--primary) / 0.12)" },
+        },
+        "kpi-countup": {
+          from: { opacity: "0", transform: "translateY(14px) scale(0.96)" },
+          to: { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "slide-down": "slide-down 0.3s ease-out forwards",
         "highlight-row": "highlight-row 1.5s ease-out forwards",
+        "field-shake": "field-shake 0.4s ease-in-out",
+        "fade-up": "fade-up 0.45s ease-out both",
+        "fade-in-soft": "fade-in-soft 0.5s ease-out both",
+        "soft-glow": "soft-glow 1.6s ease-in-out infinite",
+        "kpi-countup": "kpi-countup 0.5s ease-out both",
       },
     },
   },
