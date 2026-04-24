@@ -1339,6 +1339,7 @@ function AdminDashboard() {
         <StatCard title="Admissions" value={admissions.length} icon={<GraduationCap className="h-5 w-5" />} />
         <StatCard title="Campaigns" value={campaigns.length} icon={<Megaphone className="h-5 w-5" />} />
       </div>
+      <AdminCollectionStrip />
 
       {/* User management */}
       <div className="rounded-xl bg-card p-5 shadow-card">
