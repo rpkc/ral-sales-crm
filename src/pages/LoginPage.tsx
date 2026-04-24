@@ -237,63 +237,67 @@ export default function LoginPage() {
 
   /* ───────── Render ───────── */
 
+  const isOpsTier = activeChip.tier === "ops";
+
   return (
     <div className="min-h-screen flex bg-background text-foreground">
-      {/* ════ Left panel — branding ════ */}
-      <aside className="hidden md:flex flex-col justify-between w-[42%] lg:w-[44%] bg-secondary text-secondary-foreground p-10 lg:p-14 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 30% 20%, hsl(var(--primary)) 0, transparent 45%), radial-gradient(circle at 80% 80%, hsl(var(--primary)) 0, transparent 40%)" }} />
+      {/* ════ Left panel — branding (premium tier only) ════ */}
+      {!isOpsTier && (
+        <aside className="hidden md:flex flex-col justify-between w-[42%] lg:w-[44%] bg-secondary text-secondary-foreground p-10 lg:p-14 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+            style={{ backgroundImage: "radial-gradient(circle at 30% 20%, hsl(var(--primary)) 0, transparent 45%), radial-gradient(circle at 80% 80%, hsl(var(--primary)) 0, transparent 40%)" }} />
 
-        <div className="relative animate-fade-up">
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <span className="font-bold text-primary-foreground">RA</span>
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Red Apple Learning</p>
-              <p className="text-[11px] text-secondary-foreground/60">Finance & Operations</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative space-y-6">
-          <div className="space-y-2 animate-fade-up">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/50">{greeting}</p>
-            <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
-              Red Apple Learning <span className="text-primary">Control Center</span>
-            </h1>
-            <p className="text-sm text-secondary-foreground/70 max-w-md">
-              Secure access to finance, billing and business intelligence.
-            </p>
-          </div>
-
-          {/* Rotating trust message — key forces re-mount + fade */}
-          <div key={trust} className="flex items-center gap-2 text-xs text-secondary-foreground/80 animate-fade-in-soft">
-            <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>{trust}</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 max-w-md">
-            {[
-              { k: "Verified", v: "Daily reconciliation" },
-              { k: "Encrypted", v: "256-bit session" },
-              { k: "Audited", v: "Full accountability" },
-              { k: "Real-time", v: "Live KPIs" },
-            ].map((x, i) => (
-              <div key={x.k}
-                className="rounded-lg border border-secondary-foreground/10 bg-secondary-foreground/[0.04] px-3 py-2.5 animate-fade-up"
-                style={{ animationDelay: `${100 + i * 70}ms` }}>
-                <p className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">{x.k}</p>
-                <p className="text-xs font-medium mt-0.5">{x.v}</p>
+          <div className="relative animate-fade-up">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+                <span className="font-bold text-primary-foreground">RA</span>
               </div>
-            ))}
+              <div>
+                <p className="text-sm font-semibold">Red Apple Learning</p>
+                <p className="text-[11px] text-secondary-foreground/60">Finance & Operations</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="relative text-[11px] text-secondary-foreground/50 flex items-center gap-2">
-          <span>Restricted system. Authorized personnel only.</span>
-        </div>
-      </aside>
+          <div className="relative space-y-6">
+            <div className="space-y-2 animate-fade-up">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/50">{greeting}</p>
+              <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
+                Red Apple Learning <span className="text-primary">Control Center</span>
+              </h1>
+              <p className="text-sm text-secondary-foreground/70 max-w-md">
+                Secure access to finance, billing and business intelligence.
+              </p>
+            </div>
+
+            {/* Rotating trust message — key forces re-mount + fade */}
+            <div key={trust} className="flex items-center gap-2 text-xs text-secondary-foreground/80 animate-fade-in-soft">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{trust}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              {[
+                { k: "Verified", v: "Daily reconciliation" },
+                { k: "Encrypted", v: "256-bit session" },
+                { k: "Audited", v: "Full accountability" },
+                { k: "Real-time", v: "Live KPIs" },
+              ].map((x, i) => (
+                <div key={x.k}
+                  className="rounded-lg border border-secondary-foreground/10 bg-secondary-foreground/[0.04] px-3 py-2.5 animate-fade-up"
+                  style={{ animationDelay: `${100 + i * 70}ms` }}>
+                  <p className="text-[10px] uppercase tracking-wider text-secondary-foreground/50">{x.k}</p>
+                  <p className="text-xs font-medium mt-0.5">{x.v}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="relative text-[11px] text-secondary-foreground/50 flex items-center gap-2">
+            <span>Restricted system. Authorized personnel only.</span>
+          </div>
+        </aside>
+      )}
 
       {/* ════ Right panel — login ════ */}
       <main className="flex-1 flex items-center justify-center p-5 sm:p-8">
