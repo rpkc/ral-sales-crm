@@ -262,6 +262,8 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
         <FinanceKpi label="Risk Revenue" value={fmtINR(riskAtStake)} hint={`${riskRows.filter(r => r.riskLevel !== "low").length} students`} tone={riskAtStake > 0 ? "warning" : "success"} icon={<ShieldCheck className="h-4 w-4" />} onClick={() => onJump("projections")} />
       </div>
 
+      <PiTiDashboardSection onJump={onJump} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-4 lg:col-span-2">
           <h3 className="text-sm font-semibold mb-3">Revenue vs Expense Trend</h3>
