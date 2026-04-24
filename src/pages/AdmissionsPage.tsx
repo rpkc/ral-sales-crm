@@ -316,6 +316,8 @@ export default function AdmissionsPage() {
   const [paymentDialogAdm, setPaymentDialogAdm] = useState<Admission | null>(null);
   const [selectedAdm, setSelectedAdm] = useState<Admission | null>(admissions[0] || null);
   const [newPaymentIds, setNewPaymentIds] = useState<Set<string>>(new Set());
+  const [autoPiAdm, setAutoPiAdm] = useState<Admission | null>(null);
+  const navigate = useNavigate();
 
   const leads = store.getLeads();
   const qualifiedLeads = leads.filter((l) => l.status === "Admission" || l.status === "Qualified");
