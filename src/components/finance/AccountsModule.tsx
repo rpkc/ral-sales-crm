@@ -49,6 +49,7 @@ import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type Invo
 import { ProjectionsTab } from "./ProjectionsTab";
 import { ReportsTab } from "./ReportsTab";
 import { VerificationsTab, VerifiedPaymentsTab, CollectionReportsTab } from "./CollectionControlTabs";
+import { CollectionsLogTab, InvoiceRequestsTab } from "./InvoiceRequestTabs";
 import { computeEmiMetrics, computeStudentRisk, computePiTiSplit, computePiTiMonthlyTrend } from "@/lib/revenue-projection";
 import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
 import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
@@ -87,6 +88,8 @@ const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "revenue", label: "Revenue", roles: ["owner"] },
   { id: "projections", label: "Projections", roles: ["owner"] },
   { id: "billing", label: "Billing", roles: ["owner", "manager", "executive"] },
+  { id: "collections_log", label: "Collection Ledger", roles: ["owner", "manager", "executive"] },
+  { id: "invoice_requests", label: "Invoice Requests", roles: ["owner", "manager", "executive"] },
   { id: "verifications", label: "Verifications", roles: ["owner", "manager"] },
   { id: "verified_payments", label: "Verified → TI", roles: ["owner", "manager", "executive"] },
   { id: "collections", label: "Collections", roles: ["owner", "manager", "executive"] },
@@ -138,6 +141,8 @@ export function AccountsModule() {
         <TabsContent value="revenue" className="mt-4"><RevenueTab /></TabsContent>
         <TabsContent value="projections" className="mt-4"><ProjectionsTab /></TabsContent>
         <TabsContent value="billing" className="mt-4"><BillingTab role={role} /></TabsContent>
+        <TabsContent value="collections_log" className="mt-4"><CollectionsLogTab role={role} /></TabsContent>
+        <TabsContent value="invoice_requests" className="mt-4"><InvoiceRequestsTab role={role} /></TabsContent>
         <TabsContent value="verifications" className="mt-4"><VerificationsTab canVerify={currentUser?.role === "admin" || role === "owner" || role === "manager"} /></TabsContent>
         <TabsContent value="verified_payments" className="mt-4"><VerifiedPaymentsTab role={role} /></TabsContent>
         <TabsContent value="collections" className="mt-4"><CollectionsTab role={role} /></TabsContent>
