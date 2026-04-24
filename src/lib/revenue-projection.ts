@@ -87,12 +87,16 @@ function buildEmptyMonths(horizon: number): MonthBucket[] {
   return out;
 }
 
-// ────────────────────────────── Layer 1: Collected ──────────────────────────────
-// "Confirmed collections" for the current month = payments already received this month.
-// Future months get 0 here — the forecast layers fill them.
-function applyConfirmedCollections(buckets: MonthBucket[], payments: Payment[]) {
+// ────────────────────────────── Layer 1: Collected (TI only) ──────────────────────────────
+// "Confirmed collections" = payments received against TI (Tax Invoices) only.
+// PI payments — if any leak in via legacy data — are excluded so collected revenue
+// is never double-counted with PI receivables.
+function applyConfirmedCollections(buckets: MonthBucket[], payments: Payment[], invoices: Invoice[]) {
+  const tiIds = new Set(invoices.filter(i => i.invoiceType === "TI").map(i => i.id));
   const byMonth = new Map<string, number>();
   payments.forEach(p => {
+    // Only count payments linked to a TI (or unlinked legacy payments treated as TI-equivalent).
+    if (p.invoiceId && !tiIds.has(p.invoiceId)) return;
     const k = monthKey(new Date(p.paidOn));
     byMonth.set(k, (byMonth.get(k) || 0) + p.amount);
   });
@@ -101,11 +105,15 @@ function applyConfirmedCollections(buckets: MonthBucket[], payments: Payment[]) 
   });
 }
 
-// ────────────────────────────── Layer 2: Scheduled EMIs ──────────────────────────────
-function applyScheduledEmis(buckets: MonthBucket[], emis: EmiSchedule[], recoveryRate: number) {
+// ────────────────────────────── Layer 2: Scheduled EMIs (TI-backed only) ──────────────────────────────
+// Open PI receivables flow through the dedicated PI receivables layer (computePiReceivableSchedule),
+// not via EMIs. Scheduled EMIs only count when the underlying invoice is a TI.
+function applyScheduledEmis(buckets: MonthBucket[], emis: EmiSchedule[], invoices: Invoice[], recoveryRate: number) {
+  const tiIds = new Set(invoices.filter(i => i.invoiceType === "TI").map(i => i.id));
   const byMonth = new Map<string, number>();
   emis.forEach(e => {
     if (e.status === "Paid") return;
+    if (e.invoiceId && !tiIds.has(e.invoiceId)) return;
     const k = monthKey(new Date(e.dueDate));
     byMonth.set(k, (byMonth.get(k) || 0) + e.amount * recoveryRate);
   });
@@ -224,8 +232,8 @@ export function projectMonthly(input: ProjectionInput): MonthBucket[] {
   const continuation = input.continuation ?? DEFAULT_CONTINUATION;
 
   const buckets = buildEmptyMonths(horizon);
-  applyConfirmedCollections(buckets, input.payments);
-  applyScheduledEmis(buckets, input.emiSchedules, scenario.emiRecoveryRate);
+  applyConfirmedCollections(buckets, input.payments, input.invoices);
+  applyScheduledEmis(buckets, input.emiSchedules, input.invoices, scenario.emiRecoveryRate);
   applyContinuation(buckets, input.invoices, continuation);
 
   const trend = computeAdmissionTrend(input.invoices, 6);
@@ -434,3 +442,104 @@ export function computeRevenueKpis(
     cacPaybackMonths: monthlyBurn > 0 ? Math.max(0, avgTicket / monthlyBurn) : 0,
   };
 }
+
+// ────────────────────────────── PI / TI split (dashboards) ──────────────────────────────
+export interface PiTiSplit {
+  /** Sum of TI totals — recognized / realized billing. */
+  realizedRevenueBilled: number;
+  /** Cash actually collected on TI invoices. */
+  realizedRevenueCollected: number;
+  /** Open PI total (issued but not converted) — pure receivable pipeline. */
+  piReceivableOpen: number;
+  /** All PI raised in window (regardless of state). */
+  piRaised: number;
+  /** PI amount converted to TI so far. */
+  piConverted: number;
+  /** Conversion %. */
+  piToTiConversionPct: number;
+  /** GST collected on TI only — what actually creates GST liability. */
+  gstFromTi: number;
+  /** Receivable aging on PI only. */
+  piAgingBuckets: { bucket: string; amount: number; count: number }[];
+}
+
+export function computePiTiSplit(
+  invoices: Invoice[],
+  payments: Payment[],
+  piOpenBalanceFn: (invoiceId: string) => number,
+): PiTiSplit {
+  const ti = invoices.filter(i => i.invoiceType === "TI" && i.status !== "Cancelled");
+  const pi = invoices.filter(i => i.invoiceType === "PI" && i.status !== "Cancelled");
+  const tiIds = new Set(ti.map(i => i.id));
+
+  const realizedRevenueBilled = ti.reduce((s, i) => s + i.total, 0);
+  const realizedRevenueCollected = payments
+    .filter(p => !p.invoiceId || tiIds.has(p.invoiceId))
+    .reduce((s, p) => s + p.amount, 0);
+  const piRaised = pi.reduce((s, i) => s + i.total, 0);
+  const piReceivableOpen = pi.reduce((s, i) => s + piOpenBalanceFn(i.id), 0);
+  const piConverted = Math.max(0, piRaised - piReceivableOpen);
+  const piToTiConversionPct = piRaised > 0 ? Math.round((piConverted / piRaised) * 100) : 0;
+  const gstFromTi = ti.reduce((s, i) => s + i.cgst + i.sgst + i.igst, 0);
+
+  const now = Date.now();
+  const buckets: Record<string, { amount: number; count: number }> = {
+    "0-30": { amount: 0, count: 0 },
+    "31-60": { amount: 0, count: 0 },
+    "61-90": { amount: 0, count: 0 },
+    "90+":   { amount: 0, count: 0 },
+  };
+  pi.forEach(i => {
+    const open = piOpenBalanceFn(i.id);
+    if (open <= 0) return;
+    const days = Math.floor((now - new Date(i.dueDate).getTime()) / 86400000);
+    const k = days < 30 ? "0-30" : days < 60 ? "31-60" : days < 90 ? "61-90" : "90+";
+    buckets[k].amount += open;
+    buckets[k].count += 1;
+  });
+  const piAgingBuckets = Object.entries(buckets).map(([bucket, v]) => ({ bucket, ...v }));
+
+  return {
+    realizedRevenueBilled,
+    realizedRevenueCollected,
+    piReceivableOpen,
+    piRaised,
+    piConverted,
+    piToTiConversionPct,
+    gstFromTi,
+    piAgingBuckets,
+  };
+}
+
+/** PI vs TI monthly trend (last `months` months). */
+export interface PiTiMonthlyPoint {
+  month: string;
+  label: string;
+  piRaised: number;
+  tiGenerated: number;
+  collected: number;
+}
+
+export function computePiTiMonthlyTrend(
+  invoices: Invoice[],
+  payments: Payment[],
+  months = 6,
+): PiTiMonthlyPoint[] {
+  const out: PiTiMonthlyPoint[] = [];
+  const start = new Date();
+  start.setDate(1);
+  const tiIds = new Set(invoices.filter(i => i.invoiceType === "TI").map(i => i.id));
+  for (let i = months - 1; i >= 0; i--) {
+    const d = addMonths(start, -i);
+    const k = monthKey(d);
+    const piRaised = invoices.filter(inv => inv.invoiceType === "PI" && monthKey(new Date(inv.issueDate)) === k)
+      .reduce((s, inv) => s + inv.total, 0);
+    const tiGenerated = invoices.filter(inv => inv.invoiceType === "TI" && monthKey(new Date(inv.issueDate)) === k)
+      .reduce((s, inv) => s + inv.total, 0);
+    const collected = payments.filter(p => (!p.invoiceId || tiIds.has(p.invoiceId)) && monthKey(new Date(p.paidOn)) === k)
+      .reduce((s, p) => s + p.amount, 0);
+    out.push({ month: k, label: monthLabel(d), piRaised, tiGenerated, collected });
+  }
+  return out;
+}
+

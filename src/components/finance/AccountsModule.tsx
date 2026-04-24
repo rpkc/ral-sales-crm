@@ -47,10 +47,12 @@ import { computeBreakup, detectIntraState, validateGstInput, type GstInputMode }
 import { InvoiceEditDialog } from "./InvoiceEditDialog";
 import { getInvoiceEdits, subscribeInvoiceEdits, HIGH_VALUE_THRESHOLD, type InvoiceEditEntry } from "@/lib/invoice-edit-store";
 import { ProjectionsTab } from "./ProjectionsTab";
-import { computeEmiMetrics, computeStudentRisk } from "@/lib/revenue-projection";
+import { ReportsTab } from "./ReportsTab";
+import { computeEmiMetrics, computeStudentRisk, computePiTiSplit, computePiTiMonthlyTrend } from "@/lib/revenue-projection";
 import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
 import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
 import { piOpenBalance, piConvertedAmount } from "@/lib/finance-store";
+import { scanPiDueAlerts } from "@/lib/pi-ti-notifications";
 import { ArrowRight } from "lucide-react";
 
 const CHART_COLORS = ["hsl(var(--primary))", "#1A1A1A", "#10b981", "#f59e0b", "#6366f1", "#ec4899", "#0ea5e9"];
@@ -92,6 +94,7 @@ const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
   { id: "profit", label: "Profitability", roles: ["owner", "manager"] },
   { id: "cashflow", label: "Cash Flow", roles: ["owner"] },
   { id: "gst", label: "GST", roles: ["owner", "manager"] },
+  { id: "reports", label: "Reports", roles: ["owner", "manager"] },
   { id: "exports", label: "Exports", roles: ["owner", "manager"] },
 ];
 
@@ -102,7 +105,7 @@ export function AccountsModule() {
   const tabs = ALL_TABS.filter(t => t.roles.includes(role));
   const [tab, setTab] = useState(tabs[0].id);
 
-  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); }, []);
+  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); scanPiDueAlerts(getFinance().invoices); }, []);
 
   return (
     <div className="space-y-6">
@@ -139,6 +142,7 @@ export function AccountsModule() {
         <TabsContent value="profit" className="mt-4"><ProfitTab /></TabsContent>
         <TabsContent value="cashflow" className="mt-4"><CashflowTab /></TabsContent>
         <TabsContent value="gst" className="mt-4"><GstTab /></TabsContent>
+        <TabsContent value="reports" className="mt-4"><ReportsTab /></TabsContent>
         <TabsContent value="exports" className="mt-4"><ExportsTab /></TabsContent>
       </Tabs>
     </div>
@@ -258,6 +262,8 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
         <FinanceKpi label="Risk Revenue" value={fmtINR(riskAtStake)} hint={`${riskRows.filter(r => r.riskLevel !== "low").length} students`} tone={riskAtStake > 0 ? "warning" : "success"} icon={<ShieldCheck className="h-4 w-4" />} onClick={() => onJump("projections")} />
       </div>
 
+      <PiTiDashboardSection onJump={onJump} />
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-4 lg:col-span-2">
           <h3 className="text-sm font-semibold mb-3">Revenue vs Expense Trend</h3>
@@ -293,6 +299,60 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
               <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
               <Tooltip formatter={(v: number) => fmtINR(v)} />
               <Bar dataKey="value" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── PI / TI Dashboard split ───────── */
+function PiTiDashboardSection({ onJump }: { onJump: (id: string) => void }) {
+  const fin = useFinance();
+  const split = useMemo(
+    () => computePiTiSplit(fin.invoices, fin.payments, piOpenBalance),
+    [fin.invoices, fin.payments],
+  );
+  const trend = useMemo(
+    () => computePiTiMonthlyTrend(fin.invoices, fin.payments, 6),
+    [fin.invoices, fin.payments],
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <FinanceKpi label="Receivables (PI)" value={fmtINR(split.piReceivableOpen)} hint="Open Proforma" tone="warning" icon={<FileText className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="Realized Revenue (TI)" value={fmtINR(split.realizedRevenueBilled)} hint={`Collected ${fmtINR(split.realizedRevenueCollected)}`} tone="success" icon={<Receipt className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="PI→TI Conversion" value={`${split.piToTiConversionPct}%`} hint={`${fmtINR(split.piConverted)} of ${fmtINR(split.piRaised)}`} tone={split.piToTiConversionPct >= 60 ? "success" : "warning"} onClick={() => onJump("reports")} />
+        <FinanceKpi label="GST Liability (TI)" value={fmtINR(split.gstFromTi)} hint="From TI only" tone="primary" icon={<BadgePercent className="h-4 w-4" />} onClick={() => onJump("gst")} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold mb-3">PI vs TI Monthly Trend</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={trend}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip formatter={(v: number) => fmtINR(v)} />
+              <Legend />
+              <Bar dataKey="piRaised" name="PI Raised" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="tiGenerated" name="TI Generated" fill="#10b981" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="collected" name="TI Collected" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold mb-3">Receivable Aging (PI only)</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={split.piAgingBuckets}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="bucket" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip formatter={(v: number) => fmtINR(v)} />
+              <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

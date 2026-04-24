@@ -16,6 +16,7 @@ import {
 } from "@/lib/finance-store";
 import type { Invoice, PaymentMode } from "@/lib/finance-types";
 import { fmtINR } from "./FinanceKpi";
+import { notifyTiGenerated, notifyPiConverted } from "@/lib/pi-ti-notifications";
 
 interface Props { pi: Invoice | null; open: boolean; onClose: () => void }
 
@@ -74,6 +75,8 @@ export function PiToTiConvertDialog({ pi, open, onClose }: Props) {
       reason, recordPaymentMode: paymentMode === "none" ? undefined : paymentMode,
     });
     if (!r) { toast({ title: "Conversion failed", variant: "destructive" }); return; }
+    notifyTiGenerated(r.ti);
+    notifyPiConverted(pi, r.ti, amount);
     toast({ title: "PI successfully converted and linked to TI.", description: `${r.ti.invoiceNo} · ${fmtINR(amount)}` });
     close();
   };
