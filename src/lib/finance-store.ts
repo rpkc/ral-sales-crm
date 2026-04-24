@@ -281,24 +281,7 @@ export function createInvoice(
   save({ ...state });
   return inv;
 }
-  const taxable = input.subtotal - input.discount;
-  const gst = input.gstType === "Exempt" ? 0 : taxable * input.gstRate / 100;
-  const inv: Invoice = {
-    ...input,
-    id: uid("inv"),
-    invoiceNo: nextNo("inv", "INV"),
-    cgst: gst / 2, sgst: gst / 2, igst: 0,
-    total: taxable + gst,
-    amountPaid: 0,
-    status: "Sent",
-    createdBy: by,
-    createdAt: todayISO(),
-  };
-  state.invoices.unshift(inv);
-  log("Invoice", inv.id, "created", by);
-  save({ ...state });
-  return inv;
-}
+
 
 export function recordPayment(input: Omit<Payment, "id" | "receiptNo" | "createdAt">, by: string): Payment {
   const pay: Payment = {
