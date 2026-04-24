@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BillingChart } from "@/components/billing/BillingChart";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -178,9 +179,14 @@ export default function CounselingPage() {
         <TabsList className="bg-muted w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="walkins" className="text-xs sm:text-sm">Walk-ins</TabsTrigger>
           <TabsTrigger value="counseling" className="text-xs sm:text-sm">Counseling</TabsTrigger>
+          <TabsTrigger value="billing" className="text-xs sm:text-sm">Billing</TabsTrigger>
           <TabsTrigger value="joining" className="text-xs sm:text-sm">Joining</TabsTrigger>
           <TabsTrigger value="kpi" className="text-xs sm:text-sm">KPI</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="billing" className="mt-4">
+          <BillingChart />
+        </TabsContent>
 
         {/* ═══════ TAB 1: Walk-ins ═══════ */}
         <TabsContent value="walkins" className="mt-4">
