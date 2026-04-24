@@ -333,13 +333,13 @@ function PiTiDashboardSection({ onJump }: { onJump: (id: string) => void }) {
           <h3 className="text-sm font-semibold mb-3">PI vs TI Monthly Trend</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={trend}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="label" fontSize={11} />
-              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
-              <Tooltip formatter={(v: number) => fmtINR(v)} />
-              <Legend />
-              <Bar dataKey="piRaised" name="PI Raised" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="tiGenerated" name="TI Generated" fill="#10b981" radius={[6, 6, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="hsl(var(--border))" />
+              <XAxis dataKey="label" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v: number) => fmtINR(v)} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="piRaised" name="PI Raised" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="tiGenerated" name="TI Generated" fill="hsl(var(--success))" radius={[6, 6, 0, 0]} />
               <Bar dataKey="collected" name="TI Collected" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -348,11 +348,11 @@ function PiTiDashboardSection({ onJump }: { onJump: (id: string) => void }) {
           <h3 className="text-sm font-semibold mb-3">Receivable Aging (PI only)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={split.piAgingBuckets}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="bucket" fontSize={11} />
-              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
-              <Tooltip formatter={(v: number) => fmtINR(v)} />
-              <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="hsl(var(--border))" />
+              <XAxis dataKey="bucket" fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis fontSize={11} tick={{ fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} formatter={(v: number) => fmtINR(v)} />
+              <Bar dataKey="amount" fill="hsl(var(--warning))" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
