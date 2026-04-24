@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { StatCard } from "@/components/StatCard";
 import { PiPendingWidget } from "@/components/counseling/PiPendingWidget";
+import { CollectionsWidget } from "@/components/counseling/CollectionsWidget";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -139,9 +140,14 @@ export default function CounselingPage() {
         <p className="text-sm text-muted-foreground">Walk-in management, counseling outcomes & joining tracker</p>
       </div>
 
-      {/* PI Pending Widget — top priority row */}
+      {/* PI Pending + Collections widgets — top priority row */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <PiPendingWidget counselorId={counselorId} studentNames={myLeads.map(l => l.name)} />
+        <CollectionsWidget
+          counselorId={counselorId}
+          studentNames={myLeads.map(l => l.name)}
+          students={myLeads.map(l => ({ id: l.id, name: l.name, course: l.interestedCourse || "—" }))}
+        />
       </div>
 
       {/* KPI Ribbon */}
