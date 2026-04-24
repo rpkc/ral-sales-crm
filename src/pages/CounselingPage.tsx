@@ -7,6 +7,7 @@ import {
 } from "@/lib/master-schema";
 import { useAuth } from "@/lib/auth-context";
 import { StatCard } from "@/components/StatCard";
+import { PiPendingWidget } from "@/components/counseling/PiPendingWidget";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,11 @@ export default function CounselingPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Counseling</h1>
         <p className="text-sm text-muted-foreground">Walk-in management, counseling outcomes & joining tracker</p>
+      </div>
+
+      {/* PI Pending Widget — top priority row */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <PiPendingWidget counselorId={counselorId} studentNames={myLeads.map(l => l.name)} />
       </div>
 
       {/* KPI Ribbon */}

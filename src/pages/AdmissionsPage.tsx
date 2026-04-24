@@ -12,8 +12,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { StatCard } from "@/components/StatCard";
-import { GraduationCap, IndianRupee, UserCheck, Plus, CreditCard, AlertCircle, CheckCircle2, User, Phone, Building2, CalendarClock } from "lucide-react";
+import { AutoPiPromptDialog } from "@/components/admissions/AutoPiPromptDialog";
+import { findOpenPiForStudent } from "@/lib/pi-helpers";
+import { fmtINR } from "@/components/finance/FinanceKpi";
+import { Button as UiButton } from "@/components/ui/button";
+import { GraduationCap, IndianRupee, UserCheck, Plus, CreditCard, AlertCircle, CheckCircle2, User, Phone, Building2, CalendarClock, FileText, Receipt, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const PAYMENT_MODES: PaymentMode[] = [...MASTER_PAYMENT_MODES] as PaymentMode[];
 const PAYMENT_TYPES: PaymentType[] = ["Admission Fee", "Seat Booking", "Registration", "EMI"];
