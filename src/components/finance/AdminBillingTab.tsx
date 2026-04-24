@@ -251,7 +251,7 @@ function PendingVerificationTab({
     // Verify the collection itself first.
     verifyCollection(c.id, {
       verifiedAmount: amt,
-      verificationMode: verify.mode as Collection["verificationMode"] extends infer T ? NonNullable<T> : never,
+      verificationMode: verify.mode as NonNullable<Collection["verificationMode"]>,
       remarks: verify.remarks,
     }, actor);
     // If there's a counselor invoice request awaiting admin, approve & forward it.

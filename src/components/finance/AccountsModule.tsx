@@ -51,6 +51,7 @@ import { ReportsTab } from "./ReportsTab";
 import { VerificationsTab, VerifiedPaymentsTab, CollectionReportsTab } from "./CollectionControlTabs";
 import { CollectionsLogTab, InvoiceRequestsTab } from "./InvoiceRequestTabs";
 import { BillingChart } from "@/components/billing/BillingChart";
+import { AdminBillingTab } from "./AdminBillingTab";
 import { computeEmiMetrics, computeStudentRisk, computePiTiSplit, computePiTiMonthlyTrend } from "@/lib/revenue-projection";
 import { PiToTiConvertDialog } from "./PiToTiConvertDialog";
 import { getPiTiMappings, subscribePiTi, type PiTiMapping } from "@/lib/pi-ti-store";
@@ -110,11 +111,16 @@ const ALL_TABS: { id: string; label: string; roles: RoleScope[] }[] = [
 export function AccountsModule() {
   const fin = useFinance();
   const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
   const role = scope(currentUser?.role || "accounts_executive");
   const tabs = ALL_TABS.filter(t => t.roles.includes(role));
   const [tab, setTab] = useState(tabs[0].id);
 
   useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); scanPiDueAlerts(getFinance().invoices); }, []);
+
+  // Admin gets a focused, single-tab Verification Control Center —
+  // no duplicate Billing Chart, no invoice issuance surfaces.
+  if (isAdmin) return <AdminBillingTab />;
 
   return (
     <div className="space-y-6">
