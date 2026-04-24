@@ -307,6 +307,60 @@ function DashboardTab({ onJump }: { onJump: (id: string) => void }) {
   );
 }
 
+/* ───────── PI / TI Dashboard split ───────── */
+function PiTiDashboardSection({ onJump }: { onJump: (id: string) => void }) {
+  const fin = useFinance();
+  const split = useMemo(
+    () => computePiTiSplit(fin.invoices, fin.payments, piOpenBalance),
+    [fin.invoices, fin.payments],
+  );
+  const trend = useMemo(
+    () => computePiTiMonthlyTrend(fin.invoices, fin.payments, 6),
+    [fin.invoices, fin.payments],
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <FinanceKpi label="Receivables (PI)" value={fmtINR(split.piReceivableOpen)} hint="Open Proforma" tone="warning" icon={<FileText className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="Realized Revenue (TI)" value={fmtINR(split.realizedRevenueBilled)} hint={`Collected ${fmtINR(split.realizedRevenueCollected)}`} tone="success" icon={<Receipt className="h-4 w-4" />} onClick={() => onJump("billing")} />
+        <FinanceKpi label="PI→TI Conversion" value={`${split.piToTiConversionPct}%`} hint={`${fmtINR(split.piConverted)} of ${fmtINR(split.piRaised)}`} tone={split.piToTiConversionPct >= 60 ? "success" : "warning"} onClick={() => onJump("reports")} />
+        <FinanceKpi label="GST Liability (TI)" value={fmtINR(split.gstFromTi)} hint="From TI only" tone="primary" icon={<BadgePercent className="h-4 w-4" />} onClick={() => onJump("gst")} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold mb-3">PI vs TI Monthly Trend</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={trend}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="label" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip formatter={(v: number) => fmtINR(v)} />
+              <Legend />
+              <Bar dataKey="piRaised" name="PI Raised" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="tiGenerated" name="TI Generated" fill="#10b981" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="collected" name="TI Collected" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold mb-3">Receivable Aging (PI only)</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={split.piAgingBuckets}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis dataKey="bucket" fontSize={11} />
+              <YAxis fontSize={11} tickFormatter={(v) => v >= 100000 ? `${(v/100000).toFixed(0)}L` : `${v/1000}k`} />
+              <Tooltip formatter={(v: number) => fmtINR(v)} />
+              <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 function BudgetVariance() {
   const fin = useFinance();
   const planned = fin.budgets.reduce((s, b) => s + b.plannedAmount, 0);
