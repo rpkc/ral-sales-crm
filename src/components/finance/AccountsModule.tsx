@@ -3,7 +3,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   getFinance, subscribeFinance, recomputeOverdue,
   createInvoice, recordPayment, createExpense, setExpenseStatus,
-  createVendor, createVendorBill, payVendorBill, createBudget, payEmi, autoSeedEmisForPartial,
+  createVendor, createVendorBill, payVendorBill, createBudget, payEmi, autoSeedEmisForPartial, fetchInvoicesFromApi,
 } from "@/lib/finance-store";
 import {
   Invoice, Payment, Expense, Vendor, VendorBill, Budget, EmiSchedule,
@@ -116,7 +116,7 @@ export function AccountsModule() {
   const tabs = ALL_TABS.filter(t => t.roles.includes(role));
   const [tab, setTab] = useState(tabs[0].id);
 
-  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); scanPiDueAlerts(getFinance().invoices); }, []);
+  useEffect(() => { recomputeOverdue(); autoSeedEmisForPartial(); scanPiDueAlerts(getFinance().invoices); fetchInvoicesFromApi(); }, []);
 
   // Admin gets a focused, single-tab Verification Control Center —
   // no duplicate Billing Chart, no invoice issuance surfaces.

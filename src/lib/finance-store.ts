@@ -2,6 +2,7 @@ import {
   Invoice, Payment, EmiSchedule, Expense, Vendor, VendorBill,
   Budget, CashFlowEntry, FinanceLog, ExpenseCategory, PaymentMode, InvoiceType,
 } from "./finance-types";
+import { apiFetch } from "./api";
 
 const KEY = "ral_finance_v1";
 type Listener = () => void;
@@ -203,6 +204,17 @@ export function subscribeFinance(l: Listener) {
 export function getFinance() { return state; }
 
 export function resetFinance() { save(seed()); }
+
+export async function fetchInvoicesFromApi() {
+  try {
+    const invoices = await apiFetch('/invoices');
+    if (Array.isArray(invoices)) {
+      save({ ...state, invoices });
+    }
+  } catch (err) {
+    console.error("Failed to fetch invoices from API", err);
+  }
+}
 
 /**
  * One-time auto-seeding: any Partial invoice without an EMI schedule gets

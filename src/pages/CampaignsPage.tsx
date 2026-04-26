@@ -277,6 +277,13 @@ function AdSetForm({ campaignId, onSave }: { campaignId: string; onSave: (adSet:
 // ─── Main Campaigns Page ───
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(store.getCampaigns());
+
+  useEffect(() => {
+    store.fetchCampaignsFromApi().then(fetched => {
+      setCampaigns(fetched);
+    });
+  }, []);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [leadFormOpen, setLeadFormOpen] = useState(false);
   const [adSetDialog, setAdSetDialog] = useState<string | null>(null);
