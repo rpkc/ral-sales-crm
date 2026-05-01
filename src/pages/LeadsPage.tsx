@@ -657,6 +657,13 @@ function LeadCreateForm({ onSave, onCancel, userRole }: { onSave: (lead: Lead) =
 // ─── Main Page ───
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>(store.getLeads());
+
+  useEffect(() => {
+    store.fetchLeadsFromApi().then(fetchedLeads => {
+      setLeads(fetchedLeads);
+    });
+  }, []);
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);

@@ -1,4 +1,5 @@
 import { Campaign, Lead, CallLog, FollowUp, Admission, User, UTMTracking, LeadActivity, Course } from "./types";
+import { apiFetch } from "./api";
 import {
   CollegeAccount, CollegeProgram, CollegeStudent,
   SchoolAccount, SchoolProgram, SchoolStudent,
@@ -884,8 +885,34 @@ export const store = {
   getCampaigns: () => getOrInit(STORAGE_KEYS.campaigns, mockCampaigns),
   saveCampaigns: (d: Campaign[]) => save(STORAGE_KEYS.campaigns, d),
 
+  fetchCampaignsFromApi: async () => {
+    try {
+      const campaigns = await apiFetch('/campaigns');
+      if (Array.isArray(campaigns) && campaigns.length > 0) {
+        save(STORAGE_KEYS.campaigns, campaigns);
+        return campaigns;
+      }
+    } catch (e) {
+      console.error("Failed to load campaigns from API", e);
+    }
+    return getOrInit(STORAGE_KEYS.campaigns, mockCampaigns);
+  },
+
   getLeads: () => getOrInit(STORAGE_KEYS.leads, allMockLeads),
   saveLeads: (d: Lead[]) => save(STORAGE_KEYS.leads, d),
+
+  fetchLeadsFromApi: async () => {
+    try {
+      const leads = await apiFetch('/leads');
+      if (Array.isArray(leads) && leads.length > 0) {
+        save(STORAGE_KEYS.leads, leads);
+        return leads;
+      }
+    } catch (e) {
+      console.error("Failed to load leads from API", e);
+    }
+    return getOrInit(STORAGE_KEYS.leads, allMockLeads);
+  },
 
   getCallLogs: () => getOrInit(STORAGE_KEYS.callLogs, mockCallLogs),
   saveCallLogs: (d: CallLog[]) => save(STORAGE_KEYS.callLogs, d),

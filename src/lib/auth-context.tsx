@@ -22,7 +22,7 @@ const allUsers: User[] = [
 
 interface AuthContextValue {
   currentUser: User | null;
-  loginByCredentials: (email: string, password: string) => { success: boolean; error?: string };
+  loginByCredentials: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginById: (userId: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
@@ -43,13 +43,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
-  const loginByCredentials = useCallback((email: string, password: string): { success: boolean; error?: string } => {
+  const loginByCredentials = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     if (!email || !password) return { success: false, error: "Email and password are required." };
-    const user = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    if (!user) return { success: false, error: "Invalid credentials. Please check email or password." };
-    setCurrentUser(user);
-    localStorage.setItem("crm_current_user", JSON.stringify(user));
-    return { success: true };
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return { success: false, error: data.message || "Invalid credentials. Please check email or password." };
+      }
+
+      const user = data.user;
+      setCurrentUser(user);
+      localStorage.setItem("crm_current_user", JSON.stringify(user));
+      // Optionally store the token: localStorage.setItem("crm_token", data.token);
+      return { success: true };
+    } catch (error) {
+      console.error("Login Error, falling back to local mocks", error);
+      // Fallback to local user state for development and testing when backend isn't up
+      const user = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+      if (!user) return { success: false, error: "Invalid credentials. Please check email or password." };
+      setCurrentUser(user);
+      localStorage.setItem("crm_current_user", JSON.stringify(user));
+      return { success: true };
+    }
   }, []);
 
   const loginById = useCallback((userId: string) => {

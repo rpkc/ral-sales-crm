@@ -170,11 +170,11 @@ export default function LoginPage() {
     if (typeof e.getModifierState === "function") setCapsOn(e.getModifierState("CapsLock"));
   };
 
-  const finishLogin = (em: string, pw: string) => {
+  const finishLogin = async (em: string, pw: string) => {
     setSlow(false);
     if (slowTimer.current) clearTimeout(slowTimer.current);
 
-    const result = loginByCredentials(em.trim(), pw);
+    const result = await loginByCredentials(em.trim(), pw);
     if (!result.success) {
       const next = { count: (lock.count || 0) + 1, lockedUntil: lock.lockedUntil };
       if (next.count >= LOCK_LIMIT) {
